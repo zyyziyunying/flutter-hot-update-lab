@@ -1,15 +1,15 @@
-# Flutter Hot Update Technical Research
+# Archived Flutter Hot Update Technical Research
 
-Status: active
-Scope: Research structure, constraints, and candidate technical routes for a self-developed Flutter hot update solution.
-Source of truth: this file
-Last updated: 2026-04-07
+Status: archived
+Scope: Historical discussion log for early Flutter hot update route exploration.
+Replaces: /Users/zyyziyunying/flutter-hot-update-lab/docs/discussion/2026-04-07-flutter-hot-update-technical-discussion.md
+Source of truth: /Users/zyyziyunying/flutter-hot-update-lab/docs/design/flutter-hot-update-react-like-direction.md
+Last updated: 2026-04-08
 
 ## Context
 
-This file is the active research note for the Flutter hot update solution space.
-The current goal is not implementation yet.
-The goal is to define the feasible technical boundary, compare candidate routes, and identify which route is worth prototyping first.
+This file preserves the first broad research pass over the Flutter hot update solution space.
+It records the early route survey, constraints, and comparative discussion that later narrowed into the current React-like direction.
 
 ## Question
 
@@ -520,6 +520,173 @@ So the most plausible reading of the claim is:
 That pattern is real.
 But the complete product solution is usually a stack, not one single mechanism.
 
+## Layered Model For The QuickJS + React + Flutter Route
+
+To keep the discussion structured, this route can be split into five layers:
+
+### Layer 1: Execution Layer
+
+Responsibility:
+
+- run JS or bytecode
+- manage JS context lifecycle
+- expose host APIs into the runtime
+
+Typical choices:
+
+- QuickJS runtime
+- source bundle or precompiled bytecode
+- one context per page, per bundle, or per app segment
+
+Key questions:
+
+- what exactly gets executed
+- how code is loaded and verified
+- how many contexts exist
+- what native capabilities are visible to JS
+
+### Layer 2: UI Description Layer
+
+Responsibility:
+
+- let business code describe UI and interaction declaratively
+- preserve a component model, props, state, and lifecycle
+
+Typical choices:
+
+- React-like element tree
+- Hooks-style state management
+- custom components mapped to host Flutter widgets
+
+Key questions:
+
+- how expressive the component model should be
+- how custom components compose
+- how side effects are represented
+
+### Layer 3: Patch Protocol Layer
+
+Responsibility:
+
+- turn tree changes into transportable update operations
+- avoid replacing the whole UI tree on every change
+
+Typical choices:
+
+- node insert/remove/move/update ops
+- prop diff
+- event-binding diff
+- navigation and imperative command ops
+
+Key questions:
+
+- what the patch format looks like
+- how widget identity is preserved
+- how stateful subtrees are addressed
+
+### Layer 4: Flutter Render Mapping Layer
+
+Responsibility:
+
+- map the remote tree or patch operations into real Flutter widget updates
+- preserve local state, layout stability, and interop with native Flutter pages
+
+Typical choices:
+
+- host component registry
+- widget factory layer
+- keyed node reconciliation on the Flutter side
+
+Key questions:
+
+- how much is stateless rebuild vs retained node state
+- how navigation, gestures, scrolling, and async image loading are handled
+- how mixed stacks with native Flutter pages are supported
+
+### Layer 5: Scheduling Layer
+
+Responsibility:
+
+- decide when runtime changes are flushed into Flutter
+- batch updates and coordinate commit timing
+
+Typical choices:
+
+- microtask batching
+- frame-based flushing
+- priority queues
+- idle-time or threshold-based commit
+
+Key questions:
+
+- when to commit
+- how to coalesce updates
+- how to avoid render thrashing
+
+## Current Discussion Order
+
+- First: Layer 1 execution layer
+- Then: Layer 2 UI description layer
+- Then: Layer 3 patch protocol layer
+- Then: Layer 4 Flutter render mapping layer
+- Later: Layer 5 scheduling and performance strategy
+
+## Layer Notes
+
+### Layer 1 Notes: Execution Layer
+
+Current interpretation:
+
+- This route is not true Flutter/Dart release-code hot replacement
+- It is an embedded-runtime model inside a preinstalled Flutter shell
+- A JS engine such as QuickJS becomes the dynamic execution environment
+- Flutter interacts with that runtime through a narrow host boundary, often via Dart FFI
+
+Recommended boundary:
+
+- load signed bundles or bytecode rather than arbitrary ad hoc scripts
+- prefer bounded host APIs over exposing the entire app surface
+- treat context lifecycle and capability exposure as architectural decisions, not implementation details
+
+### Layer 2 Notes: UI Description Layer
+
+Current interpretation:
+
+- A React-like UI description layer is useful because it gives business code a declarative component model instead of forcing imperative Flutter-host commands
+- The value is not "React" by brand name
+- The value is a stable mental model: component tree, props, state, effects, and identity
+
+Why this layer matters:
+
+- Dynamic UI needs a representation that is more structured than raw script side effects
+- Without a declarative tree, diffing, rollback, testing, and cross-version compatibility become much harder
+- A component model gives the runtime a stable unit for update, reuse, and state retention
+
+What this layer probably should contain:
+
+- host component abstractions such as `Text`, `Column`, `Image`, `ListView`, `Button`
+- user-defined composite components
+- props
+- local state
+- controlled effect hooks or lifecycle hooks
+- event callbacks represented as runtime-managed references rather than direct native closures
+
+What this layer probably should not contain at first:
+
+- arbitrary unrestricted host-object mutation
+- full reflection over the Flutter widget system
+- direct access to all native/plugin APIs from every component
+
+Design principle:
+
+- JS should describe intent and structure
+- Flutter host should remain the renderer and capability owner
+
+Current recommendation:
+
+- If this route is pursued, the UI description layer should be deliberately smaller than full React DOM or full Flutter API surface
+- It should start as a constrained component/runtime model designed for business pages, not an unconstrained universal UI language
+
 ## Updated View On Full Logic Hot Update
 
 ### Why it looks attractive
@@ -561,3 +728,378 @@ Prioritize feasibility analysis of the update boundary before discussing transpo
 - Add evidence-backed findings for runtime constraints and policy constraints
 - Break out separate discussion files if specific subtopics become large enough
 - Promote stable conclusions into design or problem docs later
+
+## Risk Ranking Across The Five Layers
+
+Current ranking by project-kill risk:
+
+1. Layer 4: Flutter render mapping layer
+2. Layer 2: UI description layer
+3. Layer 1: execution layer
+4. Layer 3: patch protocol layer
+5. Layer 5: scheduling layer
+
+### Why Layer 4 is the highest risk
+
+- This is where all abstraction debt becomes real behavior bugs
+- Widget identity, local state retention, navigation, gestures, scrolling, async resources, and mixed-stack interop all converge here
+- A demo can make this layer look easy, but production stability usually breaks here first
+
+### Why Layer 2 is the second highest risk
+
+- If the component model is too weak, business teams cannot express enough
+- If the model is too strong, the system becomes an uncontrolled scripting platform
+- This layer defines how much power the dynamic side has and how maintainable that power remains
+
+### Why Layer 1 is still strategically critical
+
+- The runtime itself is technically feasible
+- But capability exposure, bundle verification, context lifecycle, and policy boundary all depend on this layer
+- It rarely kills the first demo, but it can kill production viability
+
+### Why Layer 3 is important but more local
+
+- A bad patch protocol hurts efficiency and correctness
+- But it is usually repairable if the higher-level component and rendering model are sound
+
+### Why Layer 5 is usually last
+
+- Scheduling matters a lot for performance
+- But if the first four layers are wrong, scheduling does not save the architecture
+- It is more often an optimization and stabilization layer than the source of the core product risk
+
+## Current Practical Recommendation
+
+If this project ever prototypes the route, the first design energy should go into:
+
+- constraining the host component model
+- defining stable node/component identity
+- defining what state is owned by JS versus Flutter
+- designing mixed-stack navigation and lifecycle rules
+
+The main danger is not "can QuickJS run".
+The main danger is "can the system remain understandable and stable once real business pages, real state, and real navigation are placed on top of it".
+
+## Strategic Positioning Of The QuickJS + React + FFI Route
+
+Current recommendation:
+
+- treat this route as a strong high-flexibility candidate
+- do not assume it should automatically become the primary production strategy
+- evaluate it against simpler dynamicization routes before committing
+
+### Where this route is strong
+
+- Much stronger than remote config or pure asset update
+- More realistic than true Flutter/Dart release-code hot replacement
+- Gives a real programmable dynamic layer rather than only parameterization
+- Can support cross-platform business-page dynamicization with one runtime model
+
+### Where this route is weak
+
+- Architecture complexity is high
+- Team cognitive load is high because the system spans JS runtime, Flutter host, bundle system, and rendering bridge
+- Debugging and observability are harder than conventional Flutter
+- Long-term maintainability risk is significant if the capability boundary is not kept small
+- Policy review risk remains non-trivial because it still resembles downloaded logic, even if it is not direct Flutter code replacement
+
+### Strategic role options
+
+#### Option 1: Main strategy
+
+Meaning:
+
+- this becomes the default path for future dynamic business pages
+
+When it makes sense:
+
+- the product truly needs strong post-release flexibility
+- the team accepts building and owning runtime infrastructure
+- dynamic pages are expected to become an important long-term platform capability
+
+Risk:
+
+- highest commitment
+- easiest way to overbuild too early
+
+#### Option 2: Secondary capability
+
+Meaning:
+
+- normal Flutter remains primary
+- this route is used only for high-change, high-experiment, or remotely driven surfaces
+
+When it makes sense:
+
+- the team wants meaningful dynamic ability without rewriting the entire app architecture
+- only a subset of pages benefit from this power
+
+Risk:
+
+- mixed architecture overhead
+- requires discipline about which pages qualify
+
+#### Option 3: Research track / proving ground
+
+Meaning:
+
+- keep it as a technical exploration or prototype direction first
+- use it to learn the real boundary before making product commitments
+
+When it makes sense:
+
+- the team is still uncertain about business need, policy tolerance, or maintenance cost
+- there is not yet a clear target page type or rollout model
+
+Risk:
+
+- may never graduate if evaluation criteria stay vague
+
+## Current Strategic Recommendation
+
+At the current stage, the best position for this route is:
+
+- not "final main strategy"
+- not "discarded"
+- but "priority research candidate with a likely future role as a secondary capability"
+
+Why:
+
+- It is much more credible than unrestricted Flutter code hot update
+- It is much more powerful than simple config-driven dynamicization
+- But it is still too heavy to declare as the default architecture before validating the business need and operational cost
+
+## What This Route Must Prove To Earn Promotion
+
+Before it can move from research candidate to production strategy, it should prove:
+
+- a constrained host component model is enough for real business pages
+- dynamic pages can coexist cleanly with normal Flutter pages
+- bundle loading, verification, and rollback are manageable
+- the debugging and release workflow are acceptable for the team
+- platform and policy risk are acceptable for the intended distribution channel
+
+## Interim Conclusion
+
+This route currently looks best as:
+
+- a serious technical direction
+- a likely high-flexibility capability for selected surfaces
+- not yet a justified default for the whole application architecture
+
+## Horizontal Comparison Of Dynamicization Routes
+
+To decide whether the QuickJS + React + FFI route deserves top priority, it should be compared against lighter alternatives.
+
+### Route 1: Remote config / asset update
+
+What it changes:
+
+- text
+- images
+- layout parameters
+- feature flags
+- business thresholds
+
+Strengths:
+
+- lowest risk
+- easiest rollout and rollback
+- lowest policy pressure
+- fastest time to value
+
+Weaknesses:
+
+- cannot express real page-level logic changes
+- product flexibility is limited by what the native app pre-exposes
+
+Strategic role:
+
+- should almost always exist as a base capability
+- not sufficient alone if the goal is strong dynamicization
+
+### Route 2: Server-driven UI / schema-driven UI
+
+What it changes:
+
+- page structure
+- component composition
+- some interaction flow
+- controlled business rules
+
+Strengths:
+
+- much safer than a general script runtime
+- good fit for standard business pages
+- easier to audit and constrain than arbitrary JS execution
+
+Weaknesses:
+
+- expressiveness is capped by the schema
+- schema evolution can become difficult
+- complex interactions become awkward if the schema grows too much
+
+Strategic role:
+
+- very strong mainstream candidate
+- often the best first serious dynamicization route
+
+### Route 3: DSL / rule engine
+
+What it changes:
+
+- business flow
+- validation rules
+- calculation logic
+- controlled interaction behavior
+
+Strengths:
+
+- tighter control than general JS
+- good for forms, pricing, workflows, decision logic
+- can be highly portable and auditable
+
+Weaknesses:
+
+- hard to design well
+- may become either too weak or accidentally turn into a poorly designed programming language
+- UI expression is usually weaker than full component runtimes
+
+Strategic role:
+
+- useful when the dynamic target is mostly rules and workflows
+- often pairs well with server-driven UI rather than replacing it
+
+### Route 4: QuickJS + React + FFI + Flutter mapping
+
+What it changes:
+
+- business logic
+- page structure
+- component composition
+- interaction behavior
+
+Strengths:
+
+- highest flexibility among realistic routes discussed so far
+- closest to a true programmable dynamic platform
+- can cover many cases that config/schema systems cannot
+
+Weaknesses:
+
+- highest system complexity among realistic routes
+- highest maintenance and observability burden
+- still carries policy and governance concerns
+
+Strategic role:
+
+- strong high-flexibility candidate
+- likely better as a selective capability than a universal default
+
+### Route 5: True post-release executable code replacement
+
+What it changes:
+
+- arbitrary executable logic
+
+Strengths:
+
+- theoretical maximum flexibility
+
+Weaknesses:
+
+- highest policy risk
+- weakest production viability for mainstream Flutter mobile distribution
+
+Strategic role:
+
+- not a recommended primary route for this research direction
+
+## Comparative Takeaway
+
+If the goal is only "some dynamicization", then QuickJS + React + FFI is too heavy.
+If the goal is "high-flexibility business page dynamicization", then it becomes much more attractive.
+
+This suggests a layered strategic view:
+
+- baseline capability:
+  - remote config / asset update
+- likely mainstream structured dynamicization:
+  - server-driven UI and possibly DSL/rules
+- high-flexibility advanced capability:
+  - QuickJS + React + FFI route
+
+## Current Ranking By Strategic Practicality
+
+For a self-developed Flutter dynamicization roadmap, a practical ranking currently looks like:
+
+1. Remote config / asset update as a mandatory foundation
+2. Server-driven UI or schema-driven UI as the strongest mainstream candidate
+3. QuickJS + React + FFI as the strongest high-flexibility candidate
+4. DSL/rule engine as a specialized complement or domain-specific path
+5. True executable code replacement as a non-primary research edge case
+
+## Current Recommendation For Research Sequencing
+
+The research should likely proceed in this order:
+
+1. Define the baseline capability that every route would need anyway:
+   - bundle/config delivery
+   - integrity verification
+   - rollback
+   - compatibility versioning
+2. Clarify whether the target business need is mostly:
+   - content/layout flexibility
+   - workflow/rule flexibility
+   - near-programmable page flexibility
+3. If the need is near-programmable page flexibility, keep the QuickJS + React + FFI route in the top candidate set.
+4. Do not treat the most flexible route as automatically the best first production route.
+
+## Business-Motivation Notes
+
+The motivation for this research is stronger than ordinary mobile app iteration convenience.
+The Flutter business is expected to run on hardware devices, so remote update value is materially higher.
+
+Why this matters:
+
+- asking users to download and install a new APK is possible, but operationally heavier
+- device-side upgrade friction is higher than ordinary app content iteration
+- faster remote correction of interaction or flow defects has higher practical value
+
+## Current Target Capability Shape
+
+The currently described hot-update demand is not primarily:
+
+- simple text/image/config refresh
+
+It is more likely centered on:
+
+- interaction flow changes
+- player-related UI behavior changes
+- video resource loading logic changes
+
+Interpretation:
+
+- this pushes the target capability above plain remote config
+- this may exceed what a narrow schema-only UI approach handles comfortably
+- this makes a stronger dynamic route more attractive, but still does not automatically justify unrestricted code replacement
+
+## Implication For Route Selection
+
+If the main changing surface is player interaction flow plus resource-loading strategy, then the practical target is closer to:
+
+- high-flexibility controlled dynamicization
+
+rather than:
+
+- low-flexibility content/config dynamicization
+
+This increases the relevance of:
+
+- server-driven flow plus rule capabilities
+- or a runtime-backed route such as QuickJS + React + FFI for selected surfaces
+
+It also suggests caution:
+
+- if "resource loading logic" touches low-level media playback, native integration, decoder behavior, DRM, or hardware access, not all of that should be moved into the dynamic layer
+- the dynamic layer is better suited to orchestration and business flow than to replacing the deepest media or device-specific runtime components

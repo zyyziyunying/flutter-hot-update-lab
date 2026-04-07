@@ -35,3 +35,10 @@ When a discussion turns into a stable conclusion, distill that result into the r
 - progress/result summary -> `docs/status/`
 
 Closed discussion files can later move into `docs/discussion/archive/`.
+
+## Current Focus
+
+The active hot-update direction currently lives in:
+
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/flutter-hot-update-react-like-direction.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/discussion/2026-04-08-react-like-dynamic-runtime.md`
