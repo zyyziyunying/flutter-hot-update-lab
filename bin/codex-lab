@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+LAB_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+LAB_HOME="$LAB_ROOT/.home"
+LAB_CODEX_HOME="$LAB_HOME/.codex"
+LAB_NPM_PREFIX="$LAB_ROOT/.npm-global"
+
+export HOME="$LAB_HOME"
+export CODEX_HOME="$LAB_CODEX_HOME"
+export npm_config_prefix="$LAB_NPM_PREFIX"
+export PATH="$LAB_NPM_PREFIX/bin:$PATH"
+
+exec codex "$@"
