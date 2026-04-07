@@ -40,6 +40,50 @@ The next discussion should stay centered on the React-like route, especially:
 - How should the runtime bundle model be shaped for safe update and rollback?
 - Which parts of the player-related flow should remain permanently non-dynamic?
 
+## Session Record: 2026-04-08
+
+### Discussion Method
+
+- Continue by clarifying one working question at a time rather than forcing an early architecture decision checklist.
+- The current session mainly narrowed `Q1` and did not try to close `Q2` to `Q4`.
+
+### Provisional Understanding For Q1
+
+- The target player is not a general-purpose player with broad traditional player features.
+- The fixed player core is intentionally small and centered on `play`, `pause`, and queue playback.
+- The main dynamic target is the business orchestration built on top of that fixed core rather than the playback engine itself.
+
+### Current Layering Hypothesis
+
+- Host fixed layer: playback execution, queue execution, and low-level stability-critical capability.
+- Server logic layer: the primary path for day-to-day playback logic, likely expressed as a finite-state-machine or rule-tree model and executed locally after fetch.
+- Hot update layer: a secondary path for emergency repair or changes that are awkward to express cleanly in the server logic model.
+
+### Data vs Logic Boundary
+
+- Simple resource-set changes such as `A-C` growing to `A-D` do not by themselves justify hot update.
+- Many resource additions or replacements can stay in the normal server-data path.
+- The stronger hot-update target is change in playback business logic and orchestration rather than simple data replacement.
+
+### Runtime Responsibility Direction
+
+- The business-logic discussion was reframed as `state + event + decision + action`.
+- The most important dynamic part is still the decision layer: how the next playback step is chosen from current state and events.
+- Player actions should remain executed through fixed host APIs even when the decision logic becomes dynamic.
+
+### Update Rhythm And Switch Model
+
+- Business logic is expected to change at a low frequency, roughly on a weekly cadence, with occasional small surprise updates.
+- `Pull` is the primary update mechanism; `push` is not required as the main path.
+- The playback session may stay alive for a long time, but each item is a short video unit of roughly `2s`.
+- A safe logic switch point is after the current item ends and before the next item starts.
+- Mid-item logic switching is not currently desired.
+
+### Open Point Left For Practice
+
+- A previous version already explored the finite-state-machine or rule-tree route.
+- The next practical step should validate how far that model can carry daily playback orchestration before hot update needs to take over.
+
 ## Notes
 
 - Keep new discussion here unless a subtopic becomes large enough to deserve its own file.
