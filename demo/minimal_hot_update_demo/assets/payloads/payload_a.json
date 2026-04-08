@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "screen": {
+    "type": "column",
+    "children": [
+      {
+        "type": "container",
+        "style": {
+          "padding": 16,
+          "backgroundColor": "#EAF4FF"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "Counter Demo A",
+            "style": {
+              "fontSize": 24,
+              "textColor": "#123456"
+            }
+          },
+          {
+            "type": "text",
+            "text": "Payload A adds one each time.",
+            "style": {
+              "padding": 8,
+              "fontSize": 14,
+              "textColor": "#4A5568"
+            }
+          },
+          {
+            "type": "button",
+            "text": "Add",
+            "style": {
+              "padding": 8
+            },
+            "action": {
+              "type": "increment_counter",
+              "delta": 1
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

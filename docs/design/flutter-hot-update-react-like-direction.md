@@ -67,7 +67,18 @@ The React-like route should currently be treated as:
 - a likely high-flexibility capability for selected surfaces
 - not yet the universal default architecture for every part of the application
 
+## Stable Lessons From External Reference
+
+The analysis of `fuckjs_demo` reinforces several stable conclusions for this repository:
+
+- The right target is still a fixed host plus a dynamic business layer rather than unrestricted whole-app code replacement.
+- The key design problem is the host/dynamic boundary, not whether the dynamic language happens to be JS or something else.
+- Bundle-level delivery should be treated as a primary operational unit for versioning, rollout, compatibility, and rollback.
+- Mixed navigation between dynamic pages and native pages should be preserved as a first-class capability.
+- A full JS-driven UI runtime is a high-power but high-cost route, so it should not be adopted by default before lighter business-logic models are proven insufficient.
+
 ## Related Docs
 
 - active discussion: /Users/zyyziyunying/flutter-hot-update-lab/docs/discussion/2026-04-08-react-like-dynamic-runtime.md
+- external reference analysis: /Users/zyyziyunying/flutter-hot-update-lab/docs/discussion/2026-04-08-fuckjs-demo-analysis.md
 - archived broad research log: /Users/zyyziyunying/flutter-hot-update-lab/docs/discussion/archive/2026-04-07-flutter-hot-update-technical-research.md

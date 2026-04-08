@@ -39,6 +39,23 @@ cd /Users/zyyziyunying/flutter-hot-update-lab
 ./bin/omx-lab
 ```
 
+## Minimal Demo
+
+Run the first local hot-update demo:
+
+```sh
+cd /Users/zyyziyunying/flutter-hot-update-lab/demo/minimal_hot_update_demo
+flutter run -d macos
+```
+
+Verify the demo app:
+
+```sh
+cd /Users/zyyziyunying/flutter-hot-update-lab/demo/minimal_hot_update_demo
+flutter analyze
+flutter test
+```
+
 ## Notes
 
 - This setup isolates the user skill/config layer, not the global `codex` binary.

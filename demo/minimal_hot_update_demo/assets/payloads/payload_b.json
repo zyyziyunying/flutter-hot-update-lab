@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "screen": {
+    "type": "column",
+    "children": [
+      {
+        "type": "container",
+        "style": {
+          "padding": 20,
+          "backgroundColor": "#FFF3E8"
+        },
+        "children": [
+          {
+            "type": "text",
+            "text": "Counter Demo B",
+            "style": {
+              "fontSize": 24,
+              "textColor": "#7A2E0B"
+            }
+          },
+          {
+            "type": "text",
+            "text": "Payload B changes both tone and increment size.",
+            "style": {
+              "padding": 8,
+              "fontSize": 14,
+              "textColor": "#8C6239"
+            }
+          },
+          {
+            "type": "button",
+            "text": "Boost",
+            "style": {
+              "padding": 8
+            },
+            "action": {
+              "type": "increment_counter",
+              "delta": 2
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
