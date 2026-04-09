@@ -8,6 +8,9 @@ Last updated: 2026-04-09
 ## Current State
 
 The repository has finished a large documentation realignment.
+It now also has a first runnable in-repo PoC at:
+
+- `/Users/zyyziyunying/flutter-hot-update-lab/demo/react_like_runtime_poc`
 
 The active route is now:
 
@@ -32,6 +35,7 @@ If you need the current canonical direction, read these files in order:
 If you need the current implementation follow-up, then read:
 
 7. `/Users/zyyziyunying/flutter-hot-update-lab/docs/plan/2026-04-08-react-like-js-runtime-poc-plan.md`
+8. `/Users/zyyziyunying/flutter-hot-update-lab/docs/plan/2026-04-09-react-like-runtime-poc-implementation-plan.md`
 
 ## Current Canonical Files
 
@@ -47,6 +51,11 @@ If you need the current implementation follow-up, then read:
 ### Short-Term Plan
 
 - `/Users/zyyziyunying/flutter-hot-update-lab/docs/plan/2026-04-08-react-like-js-runtime-poc-plan.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/plan/2026-04-09-react-like-runtime-poc-implementation-plan.md`
+
+### Current Implementation Status
+
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/status/2026-04-09-react-like-runtime-poc-result.md`
 
 ### Supporting Discussion And Reference
 
@@ -78,13 +87,20 @@ But that plan must be interpreted under the long-term design docs, not on its ow
 
 ## Open Work
 
-The biggest remaining work is no longer document structure.
-It is implementation of:
+The biggest remaining work is now follow-up hardening and evolution of the first runnable PoC:
 
-- `demo/react_like_runtime_poc`
-- JS runtime integration with `flutter_js`
-- first React-like runtime loop
-- first native renderer
+- stronger runtime negative-path coverage
+- patch transport instead of full-tree commits
+- governed host bridge expansion
+- remote bundle delivery and rollback
+
+## Verification Checkpoint
+
+The current PoC snapshot has been re-verified on 2026-04-09 with:
+
+- `cd /Users/zyyziyunying/flutter-hot-update-lab/demo/react_like_runtime_poc && flutter analyze`
+- `cd /Users/zyyziyunying/flutter-hot-update-lab/demo/react_like_runtime_poc && flutter test`
+- `cd /Users/zyyziyunying/flutter-hot-update-lab/demo/react_like_runtime_poc && flutter build macos --profile`
 
 ## Decision Rule
 

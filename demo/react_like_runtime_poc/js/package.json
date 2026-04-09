@@ -1,0 +1,11 @@
+{
+  "name": "react-like-runtime-poc-js",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.3"
+  }
+}

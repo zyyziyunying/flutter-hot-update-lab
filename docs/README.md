@@ -65,8 +65,16 @@ These files define the stable direction, long-term engineering boundaries, and f
 The current implementation plan lives in:
 
 - `/Users/zyyziyunying/flutter-hot-update-lab/docs/plan/2026-04-08-react-like-js-runtime-poc-plan.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/plan/2026-04-09-react-like-runtime-poc-implementation-plan.md`
 
 This plan must follow the long-term design docs rather than redefine them.
+
+### Current Status Third
+
+The current implementation status lives in:
+
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/status/2026-04-09-react-like-runtime-doc-map.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/status/2026-04-09-react-like-runtime-poc-result.md`
 
 ### Discussion Support Only
 
