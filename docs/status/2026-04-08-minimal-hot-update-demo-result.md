@@ -1,9 +1,19 @@
 # Minimal Hot Update Demo Result
 
-Status: active
-Scope: Current result snapshot for the first local hot-update demo.
-Source of truth: this file
-Last updated: 2026-04-08
+Status: historical
+Scope: Historical result snapshot for the discarded local JSON payload demo route.
+Source of truth: /Users/zyyziyunying/flutter-hot-update-lab/docs/status/2026-04-09-react-like-runtime-doc-map.md
+Last updated: 2026-04-09
+
+## Historical Note
+
+This file is preserved only as a record of the earlier local JSON payload demo.
+
+It is no longer the active implementation direction for this repository.
+The current direction is the React-like runtime route documented under:
+
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/plan/2026-04-08-react-like-js-runtime-poc-plan.md`
 
 ## Outcome
 

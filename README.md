@@ -39,16 +39,31 @@ cd /Users/zyyziyunying/flutter-hot-update-lab
 ./bin/omx-lab
 ```
 
-## Minimal Demo
+## Current Direction
 
-Run the first local hot-update demo:
+The active technical route in this repository is the React-like JS runtime path with a Flutter native renderer.
+
+Start with:
+
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/status/2026-04-09-react-like-runtime-doc-map.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/plan/2026-04-08-react-like-js-runtime-poc-plan.md`
+
+This repository is currently documentation-first for that route.
+The new active PoC demo is planned as `demo/react_like_runtime_poc`, but it does not exist yet in this repository snapshot.
+
+## Historical Demo
+
+The standalone `demo/minimal_hot_update_demo` flow is preserved as historical and transitional local validation only.
+It is not the current product direction for the active React-like runtime route.
+
+If you need to inspect the older local demo path, run:
 
 ```sh
 cd /Users/zyyziyunying/flutter-hot-update-lab/demo/minimal_hot_update_demo
 flutter run -d macos
 ```
 
-Verify the demo app:
+Verify that historical demo with:
 
 ```sh
 cd /Users/zyyziyunying/flutter-hot-update-lab/demo/minimal_hot_update_demo

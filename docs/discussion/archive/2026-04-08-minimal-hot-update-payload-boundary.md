@@ -1,11 +1,21 @@
 # Minimal Hot Update Payload Boundary
 
-Status: active
-Scope: First boundary definition for the local hot-update demo payload.
-Source of truth: this file
-Last updated: 2026-04-08
+Status: archived
+Scope: Historical boundary definition for the discarded local JSON payload demo route.
+Source of truth: /Users/zyyziyunying/flutter-hot-update-lab/docs/design/flutter-hot-update-react-like-direction.md
+Last updated: 2026-04-09
 
-## Context
+## Archive Note
+
+This discussion record is preserved only as historical context.
+
+Its conclusions supported the earlier local JSON payload demo route, which is no longer the active architecture for this repository.
+The current direction is the React-like JS runtime route defined in:
+
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/flutter-hot-update-react-like-direction.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/react-like-runtime-long-term-overview.md`
+
+## Historical Content
 
 The current plan is to build a very small demo before discussing a heavier runtime architecture.
 The demo should prove one narrow thing:

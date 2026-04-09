@@ -1,9 +1,17 @@
 # fuckjs_demo Open-Source Project Analysis
 
-Status: active
-Scope: Structural analysis of the open-source project `yanweimin7/fuckjs_demo` to absorb lessons for this Flutter hot update lab.
+Status: supporting-reference
+Scope: Supporting external reference analysis used to inform the React-like runtime direction in this repository.
 Source of truth: this file
-Last updated: 2026-04-08
+Last updated: 2026-04-09
+
+## Reader Note
+
+This file is a reference analysis, not a canonical architecture decision document.
+
+The repository's stable direction now lives in the design set under:
+
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/`
 
 ## Context
 

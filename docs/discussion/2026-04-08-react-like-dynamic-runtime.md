@@ -1,9 +1,24 @@
 # React-Like Dynamic Runtime Discussion
 
-Status: active
-Scope: Ongoing focused discussion for the React-like dynamic business-layer route for Flutter hot update.
+Status: supporting-history
+Scope: Historical focused discussion record that informed the React-like runtime direction before the long-term design set was written.
 Source of truth: /Users/zyyziyunying/flutter-hot-update-lab/docs/design/flutter-hot-update-react-like-direction.md
-Last updated: 2026-04-08
+Last updated: 2026-04-09
+
+## Reader Note
+
+This file is preserved as background context, not as the primary decision surface.
+
+The current canonical design set is:
+
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/flutter-hot-update-react-like-direction.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/react-like-runtime-long-term-overview.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/react-like-runtime-long-term-architecture.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/react-like-runtime-host-bridge-governance.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/react-like-runtime-bundle-lifecycle.md`
+- `/Users/zyyziyunying/flutter-hot-update-lab/docs/design/react-like-runtime-bundle-and-tree-contract.md`
+
+Some discussion points below were later narrowed, replaced, or split into those design docs.
 
 ## Context
 
