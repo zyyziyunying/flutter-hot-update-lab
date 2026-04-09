@@ -8,17 +8,37 @@ import {
 } from '../runtime/renderer';
 
 function App() {
-  const [count, setCount] = useState(0);
+  const [items, setItems] = useState(['Milk', 'Coffee']);
+
+  const nextItemLabel = `Item ${items.length + 1}`;
 
   return (
     <View padding={24} backgroundColor="#EAF4FF">
-      <Text text="Counter Demo A" fontSize={22} textColor="#111111" />
-      <Text text={`Counter: ${count}`} fontSize={16} textColor="#444444" />
+      <Text text="List Demo A" fontSize={22} textColor="#111111" />
+      <Text
+        text="Single-page insert/remove patch demo"
+        fontSize={16}
+        textColor="#444444"
+      />
+      <View padding={12} backgroundColor="#FFFFFF">
+        {items.map((item) => (
+          <Text key={item} text={item} fontSize={16} textColor="#222222" />
+        ))}
+      </View>
       <Button
-        label="Add"
+        label="Add item"
         padding={12}
         onPress={() => {
-          setCount((current) => current + 1);
+          setItems((current) => [...current, nextItemLabel]);
+        }}
+      />
+      <Button
+        label="Remove last"
+        padding={12}
+        onPress={() => {
+          setItems((current) =>
+            current.length <= 1 ? current : current.slice(0, current.length - 1),
+          );
         }}
       />
     </View>

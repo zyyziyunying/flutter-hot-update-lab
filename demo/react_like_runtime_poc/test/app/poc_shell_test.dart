@@ -119,6 +119,164 @@ void main() {
     expect(find.text('Active bundle: bundle-a'), findsOneWidget);
   });
 
+  testWidgets('insert patch renders a new list item in the shell', (tester) async {
+    await pumpShell(
+      tester,
+      runtime: createRuntime(
+        programsBySource: {
+          'bundle-a-source': FakeBundleProgram(
+            bundleId: 'bundle-a',
+            bundleVersion: '1.0.0',
+            title: 'List Demo A',
+            buttonLabel: 'Add item',
+            handlerId: 'h_a_add_item',
+            delta: 1,
+            bootstrapTree: {
+              'type': 'View',
+              'props': {'padding': 24},
+              'events': const {},
+              'children': [
+                {
+                  'type': 'Text',
+                  'props': {'text': 'List Demo A', 'fontSize': 22},
+                  'events': const {},
+                  'children': const [],
+                },
+                {
+                  'type': 'View',
+                  'props': {'padding': 12},
+                  'events': const {},
+                  'children': [
+                    {
+                      'type': 'Text',
+                      'props': {'text': 'Milk', 'fontSize': 16},
+                      'events': const {},
+                      'children': const [],
+                    },
+                    {
+                      'type': 'Text',
+                      'props': {'text': 'Coffee', 'fontSize': 16},
+                      'events': const {},
+                      'children': const [],
+                    },
+                  ],
+                },
+                {
+                  'type': 'Button',
+                  'props': {'label': 'Add item', 'padding': 12},
+                  'events': {'onPress': 'h_a_add_item'},
+                  'children': const [],
+                },
+              ],
+            },
+            rerenderPatch: {
+              'ops': [
+                {
+                  'op': 'insert',
+                  'path': [1, 2],
+                  'node': {
+                    'type': 'Text',
+                    'props': {'text': 'Item 3', 'fontSize': 16},
+                    'events': const {},
+                    'children': const [],
+                  },
+                },
+              ],
+            },
+          ),
+        },
+      ),
+    );
+
+    expect(find.text('Milk'), findsOneWidget);
+    expect(find.text('Coffee'), findsOneWidget);
+    expect(find.text('Item 3'), findsNothing);
+
+    await tester.tap(find.text('Add item'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Item 3'), findsOneWidget);
+  });
+
+  testWidgets('remove patch removes a list item from the shell', (tester) async {
+    await pumpShell(
+      tester,
+      runtime: createRuntime(
+        programsBySource: {
+          'bundle-a-source': FakeBundleProgram(
+            bundleId: 'bundle-a',
+            bundleVersion: '1.0.0',
+            title: 'List Demo A',
+            buttonLabel: 'Remove last',
+            handlerId: 'h_a_remove_last',
+            delta: 1,
+            bootstrapTree: {
+              'type': 'View',
+              'props': {'padding': 24},
+              'events': const {},
+              'children': [
+                {
+                  'type': 'Text',
+                  'props': {'text': 'List Demo A', 'fontSize': 22},
+                  'events': const {},
+                  'children': const [],
+                },
+                {
+                  'type': 'View',
+                  'props': {'padding': 12},
+                  'events': const {},
+                  'children': [
+                    {
+                      'type': 'Text',
+                      'props': {'text': 'Milk', 'fontSize': 16},
+                      'events': const {},
+                      'children': const [],
+                    },
+                    {
+                      'type': 'Text',
+                      'props': {'text': 'Coffee', 'fontSize': 16},
+                      'events': const {},
+                      'children': const [],
+                    },
+                    {
+                      'type': 'Text',
+                      'props': {'text': 'Item 3', 'fontSize': 16},
+                      'events': const {},
+                      'children': const [],
+                    },
+                  ],
+                },
+                {
+                  'type': 'Button',
+                  'props': {'label': 'Remove last', 'padding': 12},
+                  'events': {'onPress': 'h_a_remove_last'},
+                  'children': const [],
+                },
+              ],
+            },
+            rerenderPatch: {
+              'ops': [
+                {
+                  'op': 'remove',
+                  'path': [1, 2],
+                },
+              ],
+            },
+          ),
+        },
+      ),
+    );
+
+    expect(find.text('Item 3'), findsOneWidget);
+
+    await tester.tap(find.text('Remove last'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Item 3'), findsNothing);
+    expect(find.text('Milk'), findsOneWidget);
+    expect(find.text('Coffee'), findsOneWidget);
+  });
+
   testWidgets('root replace patch swaps the rendered shell subtree', (
     tester,
   ) async {

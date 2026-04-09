@@ -63,17 +63,35 @@
     return JSON.stringify(left) === JSON.stringify(right);
   }
   function derivePatch(previousNode, nextNode, path = []) {
-    if (previousNode.type !== nextNode.type || !areRecordsEqual(previousNode.props, nextNode.props) || !areRecordsEqual(previousNode.events, nextNode.events) || previousNode.children.length !== nextNode.children.length) {
+    if (previousNode.type !== nextNode.type || !areRecordsEqual(previousNode.props, nextNode.props) || !areRecordsEqual(previousNode.events, nextNode.events)) {
       return [{ op: "replace", path, node: nextNode }];
     }
     const childOperations = [];
-    for (let index = 0; index < previousNode.children.length; index += 1) {
+    const previousChildren = previousNode.children;
+    const nextChildren = nextNode.children;
+    const sharedLength = Math.min(previousChildren.length, nextChildren.length);
+    for (let index = 0; index < sharedLength; index += 1) {
       const operations = derivePatch(
-        previousNode.children[index],
-        nextNode.children[index],
+        previousChildren[index],
+        nextChildren[index],
         [...path, index]
       );
       childOperations.push(...operations);
+    }
+    if (previousChildren.length + 1 === nextChildren.length) {
+      childOperations.push({
+        op: "insert",
+        path: [...path, nextChildren.length - 1],
+        node: nextChildren[nextChildren.length - 1]
+      });
+      return childOperations;
+    }
+    if (previousChildren.length === nextChildren.length + 1) {
+      childOperations.push({
+        op: "remove",
+        path: [...path, previousChildren.length - 1]
+      });
+      return childOperations;
     }
     if (childOperations.length <= 1) {
       return childOperations;
@@ -189,14 +207,33 @@
 
   // src/apps/bundleA.tsx
   function App() {
-    const [count, setCount] = useState(0);
-    return /* @__PURE__ */ createElement(View, { padding: 24, backgroundColor: "#EAF4FF" }, /* @__PURE__ */ createElement(Text, { text: "Counter Demo A", fontSize: 22, textColor: "#111111" }), /* @__PURE__ */ createElement(Text, { text: `Counter: ${count}`, fontSize: 16, textColor: "#444444" }), /* @__PURE__ */ createElement(
+    const [items, setItems] = useState(["Milk", "Coffee"]);
+    const nextItemLabel = `Item ${items.length + 1}`;
+    return /* @__PURE__ */ createElement(View, { padding: 24, backgroundColor: "#EAF4FF" }, /* @__PURE__ */ createElement(Text, { text: "List Demo A", fontSize: 22, textColor: "#111111" }), /* @__PURE__ */ createElement(
+      Text,
+      {
+        text: "Single-page insert/remove patch demo",
+        fontSize: 16,
+        textColor: "#444444"
+      }
+    ), /* @__PURE__ */ createElement(View, { padding: 12, backgroundColor: "#FFFFFF" }, items.map((item) => /* @__PURE__ */ createElement(Text, { key: item, text: item, fontSize: 16, textColor: "#222222" }))), /* @__PURE__ */ createElement(
       Button,
       {
-        label: "Add",
+        label: "Add item",
         padding: 12,
         onPress: () => {
-          setCount((current) => current + 1);
+          setItems((current) => [...current, nextItemLabel]);
+        }
+      }
+    ), /* @__PURE__ */ createElement(
+      Button,
+      {
+        label: "Remove last",
+        padding: 12,
+        onPress: () => {
+          setItems(
+            (current) => current.length <= 1 ? current : current.slice(0, current.length - 1)
+          );
         }
       }
     ));

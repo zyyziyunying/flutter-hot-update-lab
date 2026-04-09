@@ -132,5 +132,89 @@ void main() {
       );
       expect(currentTree['props'], {'padding': 24});
     });
+
+    test('inserts a child node at the given path', () {
+      final currentTree = SerializedTreeDocument.requireNodeMap({
+        'type': 'View',
+        'props': {},
+        'events': {},
+        'children': [
+          {
+            'type': 'Text',
+            'props': {'text': 'Milk'},
+            'events': {},
+            'children': [],
+          },
+        ],
+      });
+
+      final patch = TreePatch.parse({
+        'ops': [
+          {
+            'op': 'insert',
+            'path': [1],
+            'node': {
+              'type': 'Text',
+              'props': {'text': 'Coffee'},
+              'events': {},
+              'children': [],
+            },
+          },
+        ],
+      });
+
+      final nextTree = TreePatchApplier.apply(
+        currentTree: currentTree,
+        patch: patch,
+      );
+
+      expect((nextTree['children'] as List), hasLength(2));
+      expect(
+        ((((nextTree['children'] as List)[1] as Map)['props']) as Map)['text'],
+        'Coffee',
+      );
+    });
+
+    test('removes a child node at the given path', () {
+      final currentTree = SerializedTreeDocument.requireNodeMap({
+        'type': 'View',
+        'props': {},
+        'events': {},
+        'children': [
+          {
+            'type': 'Text',
+            'props': {'text': 'Milk'},
+            'events': {},
+            'children': [],
+          },
+          {
+            'type': 'Text',
+            'props': {'text': 'Coffee'},
+            'events': {},
+            'children': [],
+          },
+        ],
+      });
+
+      final patch = TreePatch.parse({
+        'ops': [
+          {
+            'op': 'remove',
+            'path': [1],
+          },
+        ],
+      });
+
+      final nextTree = TreePatchApplier.apply(
+        currentTree: currentTree,
+        patch: patch,
+      );
+
+      expect((nextTree['children'] as List), hasLength(1));
+      expect(
+        ((((nextTree['children'] as List).single as Map)['props']) as Map)['text'],
+        'Milk',
+      );
+    });
   });
 }

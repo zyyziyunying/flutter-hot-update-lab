@@ -90,7 +90,7 @@ But that plan must be interpreted under the long-term design docs, not on its ow
 The biggest remaining work is now follow-up hardening and evolution of the first runnable PoC:
 
 - stronger runtime negative-path coverage
-- broader patch transport beyond single replace operations
+- broader patch transport beyond append/remove/replace-style child updates
 - governed host bridge expansion
 - remote bundle delivery and rollback
 

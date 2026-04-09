@@ -26,13 +26,20 @@ void main() {
       await session.bootstrap();
 
       expect(host.treeCommits, hasLength(1));
-      final handlerId = readHandlerId(host.treeCommits.single);
+      final handlerId = readHandlerIdByLabel(
+        host.treeCommits.single,
+        'Add item',
+      );
       expect(handlerId, isNotEmpty);
 
       await session.dispatchEvent(handlerId, const {});
 
       expect(host.patchCommits, hasLength(1));
-      expect(host.patchCommits.single['ops'], isA<List>());
+      final operations = host.patchCommits.single['ops']! as List<Object?>;
+      expect(operations, hasLength(1));
+      final operation = operations.single as Map<Object?, Object?>;
+      expect(operation['op'], 'insert');
+      expect(operation['path'], [2, 2]);
 
       await session.dispose();
     });
@@ -56,23 +63,57 @@ void main() {
         await session.evaluateBundle(bundleSource);
         await session.bootstrap();
 
-        final handlerId = readHandlerId(host.treeCommits.single);
+        final handlerId = readHandlerIdByLabel(
+          host.treeCommits.single,
+          'Add item',
+        );
 
         await session.dispatchEvent(handlerId, const {});
         await session.dispatchEvent(handlerId, const {});
 
         expect(host.patchCommits, hasLength(2));
         expect(host.logs, contains('error:commit rejected: reject-first-patch'));
-        expect(readPatchedText(host.patchCommits.first), 'Counter: 1');
+        expect(readPatchedNodeText(host.patchCommits.first), 'Item 3');
         expect(
-          readPatchedText(host.patchCommits.last),
-          'Counter: 1',
+          readPatchedNodeText(host.patchCommits.last),
+          'Item 3',
           reason: 'rejected patches should roll JS state back to the last committed snapshot',
         );
 
         await session.dispose();
       },
     );
+
+    test('transports remove patches across the real JS bridge', () async {
+      final runtime = getJavascriptRuntime(xhr: false);
+      final session = FlutterJsRuntimeSession(runtime: runtime);
+      final host = RecordingHostBridge();
+      final bundleSource = File(
+        'assets/bundles/bundle_a.js',
+      ).readAsStringSync();
+
+      await session.attachHost(host);
+      await session.evaluateBundle(bundleSource);
+      await session.bootstrap();
+
+      final addHandlerId = readHandlerIdByLabel(host.treeCommits.single, 'Add item');
+      final removeHandlerId = readHandlerIdByLabel(
+        host.treeCommits.single,
+        'Remove last',
+      );
+
+      await session.dispatchEvent(addHandlerId, const {});
+      await session.dispatchEvent(removeHandlerId, const {});
+
+      expect(host.patchCommits, hasLength(2));
+      final removeOperation =
+          (host.patchCommits.last['ops']! as List<Object?>).single
+              as Map<Object?, Object?>;
+      expect(removeOperation['op'], 'remove');
+      expect(removeOperation['path'], [2, 2]);
+
+      await session.dispose();
+    });
 
     test('transports a root-replace patch across the real JS bridge', () async {
       final runtime = getJavascriptRuntime(xhr: false);
@@ -107,14 +148,31 @@ void main() {
   });
 }
 
-String readHandlerId(Map<String, Object?> tree) {
-  final children = tree['children']! as List<Object?>;
-  final buttonNode = children.last as Map<Object?, Object?>;
-  final events = buttonNode['events']! as Map<Object?, Object?>;
-  return events['onPress']! as String;
+String readHandlerIdByLabel(Map<String, Object?> tree, String label) {
+  final queue = <Map<Object?, Object?>>[Map<Object?, Object?>.from(tree)];
+
+  while (queue.isNotEmpty) {
+    final node = queue.removeAt(0);
+    final props = node['props'];
+    if (props is Map && props['label'] == label) {
+      final events = node['events']! as Map<Object?, Object?>;
+      return events['onPress']! as String;
+    }
+
+    final children = node['children'];
+    if (children is List) {
+      for (final child in children) {
+        if (child is Map) {
+          queue.add(Map<Object?, Object?>.from(child));
+        }
+      }
+    }
+  }
+
+  throw StateError('Missing button label: $label');
 }
 
-String readPatchedText(Map<String, Object?> patch) {
+String readPatchedNodeText(Map<String, Object?> patch) {
   final operations = patch['ops']! as List<Object?>;
   final operation = operations.single as Map<Object?, Object?>;
   final node = operation['node']! as Map<Object?, Object?>;

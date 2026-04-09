@@ -18,11 +18,12 @@ This PoC proves the intended first implementation chain:
 - local JS bundle evaluation
 - bundle metadata and required-global validation
 - JS full-tree commit into Flutter
-- JS minimal replace-patch commit into Flutter for rerender updates
+- JS minimal insert/remove/replace patch commit into Flutter for rerender updates
 - native Flutter rendering of `View`, `Text`, and `Button`
 - button press dispatch back into JS
 - `useState`-driven rerender
 - bundle A/B switching with visible and behavioral change
+- a single-page list demo that appends and removes native `Text` rows without replacing the whole tree
 
 ## What Exists
 
@@ -50,7 +51,7 @@ The profiled macOS app bundle was produced at:
 
 This first PoC still intentionally does not prove:
 
-- broad patch-based tree transport beyond single replace operations
+- broad patch-based tree transport beyond append/remove/replace-style child updates
 - navigation bridge
 - player or telemetry bridge
 - remote bundle delivery
@@ -63,6 +64,6 @@ This first PoC still intentionally does not prove:
 The next meaningful follow-up should be one of:
 
 - stronger runtime error surfacing and negative-path tests
-- broader patch transport beyond single replace operations
+- broader patch transport beyond append/remove/replace-style child updates
 - governed host bridge expansion for selected business capabilities
 - remote bundle delivery, integrity verification, and rollback

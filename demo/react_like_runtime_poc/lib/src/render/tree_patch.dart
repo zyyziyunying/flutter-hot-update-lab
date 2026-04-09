@@ -24,10 +24,15 @@ class TreePatch {
 }
 
 class TreePatchOperation {
-  TreePatchOperation({required this.path, required this.node});
+  TreePatchOperation({
+    required this.op,
+    required this.path,
+    this.node,
+  });
 
+  final String op;
   final List<int> path;
-  final SerializedNodeMap node;
+  final SerializedNodeMap? node;
 
   static TreePatchOperation parse(Object? rawOperation) {
     if (rawOperation is! Map) {
@@ -35,7 +40,7 @@ class TreePatchOperation {
     }
 
     final op = rawOperation['op'];
-    if (op != 'replace') {
+    if (op != 'replace' && op != 'insert' && op != 'remove') {
       throw FormatException('unsupported-patch-op:$op');
     }
 
@@ -52,8 +57,11 @@ class TreePatchOperation {
     }).toList(growable: false);
 
     return TreePatchOperation(
+      op: op as String,
       path: path,
-      node: SerializedTreeDocument.requireNodeMap(rawOperation['node']),
+      node: op == 'remove'
+          ? null
+          : SerializedTreeDocument.requireNodeMap(rawOperation['node']),
     );
   }
 }
@@ -88,7 +96,7 @@ class SerializedTreeDocument {
     }
 
     if (value is List) {
-      return value.map(_copyValue).toList(growable: false);
+      return value.map(_copyValue).toList(growable: true);
     }
 
     return value;
@@ -103,11 +111,22 @@ class TreePatchApplier {
     var nextTree = SerializedTreeDocument.requireNodeMap(currentTree);
 
     for (final operation in patch.operations) {
-      nextTree = _applyReplace(
-        currentTree: nextTree,
-        path: operation.path,
-        replacement: operation.node,
-      );
+      switch (operation.op) {
+        case 'replace':
+          nextTree = _applyReplace(
+            currentTree: nextTree,
+            path: operation.path,
+            replacement: operation.node!,
+          );
+        case 'insert':
+          nextTree = _applyInsert(
+            currentTree: nextTree,
+            path: operation.path,
+            insertedNode: operation.node!,
+          );
+        case 'remove':
+          nextTree = _applyRemove(currentTree: nextTree, path: operation.path);
+      }
     }
 
     return nextTree;
@@ -134,6 +153,56 @@ class TreePatchApplier {
     }
 
     rawChildren[childIndex] = SerializedTreeDocument.requireNodeMap(replacement);
+    return currentTree;
+  }
+
+  static SerializedNodeMap _applyInsert({
+    required SerializedNodeMap currentTree,
+    required List<int> path,
+    required SerializedNodeMap insertedNode,
+  }) {
+    if (path.isEmpty) {
+      throw const FormatException('insert-operation-requires-parent-path');
+    }
+
+    final parent = _findNodeAtPath(currentTree, path.take(path.length - 1));
+    final rawChildren = parent['children'];
+    if (rawChildren is! List) {
+      throw const FormatException('patch-target-children-must-be-list');
+    }
+
+    final childIndex = path.last;
+    if (childIndex > rawChildren.length) {
+      throw FormatException('patch-path-out-of-range:$path');
+    }
+
+    rawChildren.insert(
+      childIndex,
+      SerializedTreeDocument.requireNodeMap(insertedNode),
+    );
+    return currentTree;
+  }
+
+  static SerializedNodeMap _applyRemove({
+    required SerializedNodeMap currentTree,
+    required List<int> path,
+  }) {
+    if (path.isEmpty) {
+      throw const FormatException('remove-operation-cannot-target-root');
+    }
+
+    final parent = _findNodeAtPath(currentTree, path.take(path.length - 1));
+    final rawChildren = parent['children'];
+    if (rawChildren is! List) {
+      throw const FormatException('patch-target-children-must-be-list');
+    }
+
+    final childIndex = path.last;
+    if (childIndex >= rawChildren.length) {
+      throw FormatException('patch-path-out-of-range:$path');
+    }
+
+    rawChildren.removeAt(childIndex);
     return currentTree;
   }
 

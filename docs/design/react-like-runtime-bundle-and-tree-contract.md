@@ -34,7 +34,7 @@ The first contract must:
 
 This contract does not try to support:
 
-- general patch-based tree transport with insert, remove, or move operations
+- general patch-based tree transport with move operations, keyed reconciliation, or multi-parent tree surgery
 - multi-page routing
 - list virtualization
 - text input
@@ -151,7 +151,7 @@ If that commit returns `{ ok: false, ... }`, the runtime must preserve the last 
 
 ## Minimal Patch Transport
 
-The current PoC supports one narrow patch payload shape for rerenders.
+The current PoC supports a narrow patch payload shape for rerenders.
 
 ### Patch Shape
 
@@ -177,13 +177,16 @@ The current PoC supports one narrow patch payload shape for rerenders.
 Rules:
 
 - `ops` must be an array
-- each op currently supports only `replace`
+- each op currently supports `insert`, `remove`, and `replace`
 - `path` is an array of child indexes from the root
 - `path: []` means replace the root node itself
+- `replace` requires a valid `node`
+- `insert` requires a valid `node` and inserts at that child index inside the parent
+- `remove` removes the node currently located at that child index
 - `node` must be a valid serialized node under the same tree schema as full-tree commits
 
 This is intentionally limited.
-The current PoC does not yet support insert, remove, or move operations.
+The current PoC still does not support move operations or key-driven reconciliation.
 
 ## Serialized Tree Format
 
