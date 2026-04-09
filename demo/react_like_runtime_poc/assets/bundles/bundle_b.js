@@ -2,6 +2,7 @@
 (() => {
   // src/runtime/hooks.ts
   var hookStates = [];
+  var committedHookStates = [];
   var hookIndex = 0;
   var scheduleRender = () => {
   };
@@ -10,6 +11,12 @@
   }
   function beginRender() {
     hookIndex = 0;
+  }
+  function commitHookState() {
+    committedHookStates = [...hookStates];
+  }
+  function rollbackHookState() {
+    hookStates = [...committedHookStates];
   }
   function useState(initialValue) {
     const currentIndex = hookIndex;
@@ -26,6 +33,9 @@
   }
 
   // src/runtime/createElement.ts
+  var View = "View";
+  var Text = "Text";
+  var Button = "Button";
   function createElement(type, props, ...children) {
     return {
       type,
@@ -37,6 +47,7 @@
   // src/runtime/renderer.ts
   var hostBridge = null;
   var rootComponent = null;
+  var activeTree = null;
   var activeHandlers = {};
   var candidateHandlers = {};
   var nextHandlerIndex = 0;
@@ -47,6 +58,27 @@
   function resetCandidateHandlers() {
     candidateHandlers = {};
     nextHandlerIndex = 0;
+  }
+  function areRecordsEqual(left, right) {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+  function derivePatch(previousNode, nextNode, path = []) {
+    if (previousNode.type !== nextNode.type || !areRecordsEqual(previousNode.props, nextNode.props) || !areRecordsEqual(previousNode.events, nextNode.events) || previousNode.children.length !== nextNode.children.length) {
+      return [{ op: "replace", path, node: nextNode }];
+    }
+    const childOperations = [];
+    for (let index = 0; index < previousNode.children.length; index += 1) {
+      const operations = derivePatch(
+        previousNode.children[index],
+        nextNode.children[index],
+        [...path, index]
+      );
+      childOperations.push(...operations);
+    }
+    if (childOperations.length <= 1) {
+      return childOperations;
+    }
+    return [{ op: "replace", path, node: nextNode }];
   }
   function serializeNode(node) {
     if (!node) {
@@ -112,11 +144,26 @@
     beginRender();
     resetCandidateHandlers();
     const tree = serializeNode(createElement(rootComponent, null));
-    const result = hostBridge.commitTree(tree);
+    let result;
+    if (activeTree == null) {
+      result = hostBridge.commitTree(tree);
+    } else {
+      const operations = derivePatch(activeTree, tree);
+      if (operations.length === 0) {
+        activeTree = tree;
+        activeHandlers = candidateHandlers;
+        commitHookState();
+        return;
+      }
+      result = hostBridge.commitPatch({ ops: operations });
+    }
     if (result.ok) {
+      activeTree = tree;
       activeHandlers = candidateHandlers;
+      commitHookState();
       return;
     }
+    rollbackHookState();
     hostBridge.log("error", `commit rejected: ${result.reason}`);
   }
   function registerBundle(meta, app) {
@@ -127,6 +174,8 @@
     globalThis.__poc_bundle_meta = meta;
     globalThis.__poc_bootstrap = (nextHostBridge) => {
       hostBridge = nextHostBridge;
+      activeTree = null;
+      activeHandlers = {};
       renderRoot();
     };
     globalThis.__poc_dispatch_event = (handlerId, payload) => {

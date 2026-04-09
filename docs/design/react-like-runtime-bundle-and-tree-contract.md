@@ -19,6 +19,7 @@ This file defines the first PoC contract for:
 
 This contract is intentionally narrow.
 It is designed to prove the architecture, not to be a final production ABI.
+The current repository snapshot now includes one minimal patch transport slice for rerender updates after the initial full-tree activation.
 
 ## Contract Goals
 
@@ -27,13 +28,13 @@ The first contract must:
 - be small enough to implement quickly
 - be explicit enough that JS runtime and Flutter renderer can be developed against the same shape
 - prove interactive rerender, not only static tree rendering
-- avoid early commitment to diff patches, navigation, or broad host services
+- keep patch transport narrow enough that it does not become a broad protocol design exercise too early
 
 ## Non-Goals
 
 This contract does not try to support:
 
-- patch-based tree transport
+- general patch-based tree transport with insert, remove, or move operations
 - multi-page routing
 - list virtualization
 - text input
@@ -118,11 +119,14 @@ It is only a first handshake to prevent silent drift between bundle output and h
 The `host` object passed into `__poc_bootstrap` exposes only:
 
 - `commitTree(tree): { ok: true } | { ok: false, reason: string }`
+- `commitPatch(patch): { ok: true } | { ok: false, reason: string }`
 - `log(level, message)`
 
 `commitTree(tree)` sends a full serialized tree snapshot to Flutter and returns a result object instead of acting as fire-and-forget transport.
 `{ ok: true }` means Flutter accepted that tree as the next active UI snapshot.
 `{ ok: false, reason }` means Flutter rejected the tree, kept the previously committed tree active, and did not promote the candidate event-binding data or callback lookup state.
+`commitPatch(patch)` applies a narrow patch payload against the currently active serialized tree and returns the same result shape.
+If patch application fails, Flutter must keep the previous committed tree and previous event-binding data active.
 `log(level, message)` is for debugging only.
 
 No additional host services are available in the first PoC.
@@ -134,7 +138,7 @@ During bootstrap, the bundle must:
 1. create the runtime app
 2. render the root component
 3. call `host.commitTree(...)` with the current full tree and treat `{ ok: true }` as the moment that tree becomes active
-4. keep enough runtime state so later host-dispatched events can trigger rerender
+4. keep enough runtime state so later host-dispatched events can trigger rerender and emit a minimal patch payload against the active tree
 
 ### Event Dispatch Entry
 
@@ -142,8 +146,44 @@ After bootstrap, the host may invoke one global event dispatcher:
 
 - `globalThis.__poc_dispatch_event(handlerId, payload)`
 
-The bundle runtime must look up the handler by id, execute it, update state if needed, rerender, and then call `host.commitTree(...)` again with the new full tree.
+The bundle runtime must look up the handler by id, execute it, update state if needed, rerender, and then call `host.commitPatch(...)` with a minimal patch payload against the active tree.
 If that commit returns `{ ok: false, ... }`, the runtime must preserve the last successfully committed callback lookup table because Flutter is still showing the previous tree.
+
+## Minimal Patch Transport
+
+The current PoC supports one narrow patch payload shape for rerenders.
+
+### Patch Shape
+
+```json
+{
+  "ops": [
+    {
+      "op": "replace",
+      "path": [1],
+      "node": {
+        "type": "Text",
+        "props": {
+          "text": "Counter: 1"
+        },
+        "events": {},
+        "children": []
+      }
+    }
+  ]
+}
+```
+
+Rules:
+
+- `ops` must be an array
+- each op currently supports only `replace`
+- `path` is an array of child indexes from the root
+- `path: []` means replace the root node itself
+- `node` must be a valid serialized node under the same tree schema as full-tree commits
+
+This is intentionally limited.
+The current PoC does not yet support insert, remove, or move operations.
 
 ## Serialized Tree Format
 
@@ -266,7 +306,7 @@ The first PoC uses this event flow:
 5. On user press, Flutter calls `globalThis.__poc_dispatch_event(handlerId, payload)`.
 6. JS resolves the handler id in the current session.
 7. JS executes the handler.
-8. If state changed, JS rerenders and sends a full new tree through `commitTree`.
+8. If state changed, JS rerenders and sends a patch through `commitPatch` against the active committed tree.
 
 ### Callback Lookup Ownership And Lifetime
 
@@ -275,9 +315,9 @@ The first PoC uses one simple activation rule:
 - the active JS runtime session owns the `handlerId -> callback` lookup table
 - Flutter owns only the active session reference, the visible tree, and the committed event-binding data needed to dispatch by `handlerId`
 - each render pass may build a candidate callback lookup table for the candidate tree inside the candidate or active JS runtime session
-- only a successful full-tree commit may promote that candidate callback lookup table to become the active callback lookup table for the active session
+- only a successful accepted commit may promote that candidate callback lookup table to become the active callback lookup table for the active session
 - handler ids from any earlier committed tree become invalid only after the new tree is accepted
-- if a tree commit is rejected, the previously committed callback lookup table must stay active inside that runtime session
+- if a rerender commit is rejected, the previously committed callback lookup table and committed runtime state must stay active inside that runtime session
 
 The host must not copy callback objects into Dart or expand the bridge beyond handler-id dispatch for this PoC.
 

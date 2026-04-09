@@ -27,10 +27,15 @@ class FlutterJsRuntimeSession implements RuntimeSession {
     _host = host;
 
     final commitChannel = '__poc_commit_tree_$_engineId';
+    final patchChannel = '__poc_commit_patch_$_engineId';
     final logChannel = '__poc_log_$_engineId';
 
     _runtime.onMessage(commitChannel, (dynamic args) {
       return host.commitTree(args);
+    });
+
+    _runtime.onMessage(patchChannel, (dynamic args) {
+      return host.commitPatch(args);
     });
 
     _runtime.onMessage(logChannel, (dynamic args) {
@@ -48,6 +53,9 @@ class FlutterJsRuntimeSession implements RuntimeSession {
       globalThis.__poc_host = {
         commitTree: function(tree) {
           return sendMessage(${jsonEncode(commitChannel)}, JSON.stringify(tree));
+        },
+        commitPatch: function(patch) {
+          return sendMessage(${jsonEncode(patchChannel)}, JSON.stringify(patch));
         },
         log: function(level, message) {
           return sendMessage(

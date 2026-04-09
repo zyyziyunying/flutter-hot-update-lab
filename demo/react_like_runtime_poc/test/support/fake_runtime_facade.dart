@@ -73,8 +73,18 @@ class FakeRuntimeSession implements RuntimeSession {
       throw StateError('Unknown handler id: $handlerId');
     }
 
+    if (program.dispatchLogError != null) {
+      _host!.log('error', program.dispatchLogError!);
+      return;
+    }
+
     _counter += program.delta;
-    _host!.commitTree(program.buildTree(_counter));
+    if (program.rerenderPatch != null) {
+      _host!.commitPatch(program.rerenderPatch);
+      return;
+    }
+
+    _host!.commitTree(program.rerenderTree ?? program.buildTree(_counter));
   }
 
   @override
@@ -96,14 +106,9 @@ class FakeRuntimeSession implements RuntimeSession {
   Future<BundleContractSnapshot> inspectContract() async {
     final program = _program!;
     return BundleContractSnapshot(
-      hasBootstrap: true,
-      hasDispatchEvent: true,
-      metadata: {
-        'bundleId': program.bundleId,
-        'bundleVersion': program.bundleVersion,
-        'runtimeAbiVersion': 'poc-v1',
-        'treeSchemaVersion': 'poc-tree-v1',
-      },
+      hasBootstrap: program.hasBootstrap,
+      hasDispatchEvent: program.hasDispatchEvent,
+      metadata: program.metadata,
     );
   }
 
@@ -113,12 +118,13 @@ class FakeRuntimeSession implements RuntimeSession {
       throw StateError('bootstrap failed for $_source');
     }
 
-    _host!.commitTree(_program!.buildTree(_counter));
+    final program = _program!;
+    _host!.commitTree(program.bootstrapTree ?? program.buildTree(_counter));
   }
 }
 
 class FakeBundleProgram {
-  const FakeBundleProgram({
+  FakeBundleProgram({
     required this.bundleId,
     required this.bundleVersion,
     required this.title,
@@ -126,7 +132,20 @@ class FakeBundleProgram {
     required this.handlerId,
     required this.delta,
     this.initialCounter = 0,
-  });
+    this.hasBootstrap = true,
+    this.hasDispatchEvent = true,
+    String runtimeAbiVersion = 'poc-v1',
+    String treeSchemaVersion = 'poc-tree-v1',
+    this.bootstrapTree,
+    this.rerenderTree,
+    this.rerenderPatch,
+    this.dispatchLogError,
+  }) : metadata = {
+         'bundleId': bundleId,
+         'bundleVersion': bundleVersion,
+         'runtimeAbiVersion': runtimeAbiVersion,
+         'treeSchemaVersion': treeSchemaVersion,
+       };
 
   final String bundleId;
   final String bundleVersion;
@@ -135,6 +154,13 @@ class FakeBundleProgram {
   final String handlerId;
   final int delta;
   final int initialCounter;
+  final bool hasBootstrap;
+  final bool hasDispatchEvent;
+  final Map<String, Object?>? metadata;
+  final Object? bootstrapTree;
+  final Object? rerenderTree;
+  final Object? rerenderPatch;
+  final String? dispatchLogError;
 
   Map<String, Object?> buildTree(int counter) {
     return {

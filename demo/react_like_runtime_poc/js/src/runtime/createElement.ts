@@ -12,6 +12,10 @@ export interface VirtualElement {
   children: VirtualChild[];
 }
 
+export const View = 'View';
+export const Text = 'Text';
+export const Button = 'Button';
+
 export function createElement(
   type: ElementType,
   props?: Record<string, unknown> | null,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:react_like_runtime_poc/src/render/element_node.dart';
 import 'package:react_like_runtime_poc/src/render/element_parser.dart';
 import 'package:react_like_runtime_poc/src/render/render_view.dart';
+import 'package:react_like_runtime_poc/src/render/tree_patch.dart';
 import 'package:react_like_runtime_poc/src/runtime/bundle_loader.dart';
 import 'package:react_like_runtime_poc/src/runtime/runtime_bridge.dart';
 import 'package:react_like_runtime_poc/src/runtime/runtime_facade.dart';
@@ -30,6 +31,7 @@ class PocShell extends StatefulWidget {
 
 class _PocShellState extends State<PocShell> {
   RuntimeSession? _activeSession;
+  SerializedNodeMap? _activeSerializedTree;
   ElementNode? _activeTree;
   BundleMetadata? _activeBundle;
   String? _errorMessage;
@@ -59,34 +61,98 @@ class _PocShellState extends State<PocShell> {
 
     final previousSession = _activeSession;
     final session = await widget.runtimeFacade.createSession();
+    SerializedNodeMap? acceptedInitialSerializedTree;
     ElementNode? acceptedInitialTree;
-    String? logError;
+    String? runtimeError;
 
     final bridge = RuntimeBridge(
       onCommitTree: (serializedTree) {
         try {
-          final parsedTree = ElementParser.parseTree(serializedTree);
+          final normalizedTree = SerializedTreeDocument.requireNodeMap(
+            serializedTree,
+          );
+          final parsedTree = ElementParser.parseTree(normalizedTree);
           if (identical(session, _activeSession)) {
             if (!mounted) {
               return const {'ok': false, 'reason': 'widget-unmounted'};
             }
 
             setState(() {
+              _activeSerializedTree = normalizedTree;
               _activeTree = parsedTree;
               _errorMessage = null;
             });
           } else {
+            acceptedInitialSerializedTree = normalizedTree;
             acceptedInitialTree = parsedTree;
           }
 
           return const {'ok': true};
-        } on FormatException {
+        } on FormatException catch (error) {
+          final message = 'Rejected committed tree: $error';
+          runtimeError = message;
+
+          if (identical(session, _activeSession) && mounted) {
+            setState(() {
+              _errorMessage = message;
+            });
+          }
+
           return const {'ok': false, 'reason': 'tree-validation-error'};
+        }
+      },
+      onCommitPatch: (serializedPatch) {
+        if (!identical(session, _activeSession)) {
+          return const {
+            'ok': false,
+            'reason': 'patch-commit-before-session-activation',
+          };
+        }
+
+        if (!mounted) {
+          return const {'ok': false, 'reason': 'widget-unmounted'};
+        }
+
+        final currentSerializedTree = _activeSerializedTree;
+        if (currentSerializedTree == null) {
+          return const {'ok': false, 'reason': 'no-active-tree-for-patch'};
+        }
+
+        try {
+          final patch = TreePatch.parse(serializedPatch);
+          final nextSerializedTree = TreePatchApplier.apply(
+            currentTree: currentSerializedTree,
+            patch: patch,
+          );
+          final parsedTree = ElementParser.parseTree(nextSerializedTree);
+
+          setState(() {
+            _activeSerializedTree = nextSerializedTree;
+            _activeTree = parsedTree;
+            _errorMessage = null;
+          });
+
+          return const {'ok': true};
+        } on FormatException catch (error) {
+          final message = 'Rejected committed patch: $error';
+          runtimeError = message;
+
+          setState(() {
+            _errorMessage = message;
+          });
+
+          return const {'ok': false, 'reason': 'patch-validation-error'};
         }
       },
       onLog: (level, message) {
         if (level == 'error') {
-          logError = message;
+          if (identical(session, _activeSession) && mounted) {
+            setState(() {
+              _errorMessage = message;
+            });
+          } else {
+            runtimeError = message;
+          }
         }
       },
     );
@@ -103,8 +169,12 @@ class _PocShellState extends State<PocShell> {
       await session.bootstrap();
 
       final initialTree = acceptedInitialTree;
+      final initialSerializedTree = acceptedInitialSerializedTree;
       if (initialTree == null) {
         throw StateError('bootstrap-did-not-commit-tree');
+      }
+      if (initialSerializedTree == null) {
+        throw StateError('bootstrap-did-not-produce-serialized-tree');
       }
 
       if (!mounted) {
@@ -114,6 +184,7 @@ class _PocShellState extends State<PocShell> {
 
       setState(() {
         _activeSession = session;
+        _activeSerializedTree = initialSerializedTree;
         _activeTree = initialTree;
         _activeBundle = bundleMetadata;
         _errorMessage = null;
@@ -130,7 +201,7 @@ class _PocShellState extends State<PocShell> {
       }
 
       setState(() {
-        _errorMessage = logError ?? '$error';
+        _errorMessage = runtimeError ?? '$error';
         _loading = false;
       });
     }

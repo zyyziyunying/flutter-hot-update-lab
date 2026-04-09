@@ -1,6 +1,8 @@
 import {
   beginRender,
+  commitHookState,
   configureHooks,
+  rollbackHookState,
 } from './hooks';
 import {
   createElement,
@@ -22,6 +24,7 @@ type SerializedNode = {
 
 type HostBridge = {
   commitTree(tree: SerializedNode): HostResult;
+  commitPatch(patch: TreePatch): HostResult;
   log(level: string, message: string): void;
 };
 
@@ -32,8 +35,19 @@ type BundleMeta = {
   treeSchemaVersion: string;
 };
 
+type TreePatchOperation = {
+  op: 'replace';
+  path: number[];
+  node: SerializedNode;
+};
+
+type TreePatch = {
+  ops: TreePatchOperation[];
+};
+
 let hostBridge: HostBridge | null = null;
 let rootComponent: FunctionComponent | null = null;
+let activeTree: SerializedNode | null = null;
 let activeHandlers: Record<string, EventHandler> = {};
 let candidateHandlers: Record<string, EventHandler> = {};
 let nextHandlerIndex = 0;
@@ -46,6 +60,45 @@ function nextHandlerId(): string {
 function resetCandidateHandlers(): void {
   candidateHandlers = {};
   nextHandlerIndex = 0;
+}
+
+function areRecordsEqual(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>,
+): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function derivePatch(
+  previousNode: SerializedNode,
+  nextNode: SerializedNode,
+  path: number[] = [],
+): TreePatchOperation[] {
+  if (
+    previousNode.type !== nextNode.type ||
+    !areRecordsEqual(previousNode.props, nextNode.props) ||
+    !areRecordsEqual(previousNode.events, nextNode.events) ||
+    previousNode.children.length !== nextNode.children.length
+  ) {
+    return [{ op: 'replace', path, node: nextNode }];
+  }
+
+  const childOperations: TreePatchOperation[] = [];
+
+  for (let index = 0; index < previousNode.children.length; index += 1) {
+    const operations = derivePatch(
+      previousNode.children[index],
+      nextNode.children[index],
+      [...path, index],
+    );
+    childOperations.push(...operations);
+  }
+
+  if (childOperations.length <= 1) {
+    return childOperations;
+  }
+
+  return [{ op: 'replace', path, node: nextNode }];
 }
 
 function serializeNode(node: VirtualChild): SerializedNode {
@@ -120,13 +173,31 @@ function renderRoot(): void {
   resetCandidateHandlers();
 
   const tree = serializeNode(createElement(rootComponent, null));
-  const result = hostBridge.commitTree(tree);
+  let result: HostResult;
+
+  if (activeTree == null) {
+    result = hostBridge.commitTree(tree);
+  } else {
+    const operations = derivePatch(activeTree, tree);
+
+    if (operations.length === 0) {
+      activeTree = tree;
+      activeHandlers = candidateHandlers;
+      commitHookState();
+      return;
+    }
+
+    result = hostBridge.commitPatch({ ops: operations });
+  }
 
   if (result.ok) {
+    activeTree = tree;
     activeHandlers = candidateHandlers;
+    commitHookState();
     return;
   }
 
+  rollbackHookState();
   hostBridge.log('error', `commit rejected: ${result.reason}`);
 }
 
@@ -139,6 +210,8 @@ export function registerBundle(meta: BundleMeta, app: FunctionComponent): void {
   globalThis.__poc_bundle_meta = meta;
   globalThis.__poc_bootstrap = (nextHostBridge: HostBridge): void => {
     hostBridge = nextHostBridge;
+    activeTree = null;
+    activeHandlers = {};
     renderRoot();
   };
 
@@ -155,4 +228,4 @@ export function registerBundle(meta: BundleMeta, app: FunctionComponent): void {
   };
 }
 
-export { createElement };
+export { Button, createElement, Text, View } from './createElement';

@@ -1,5 +1,11 @@
 import { useState } from '../runtime/hooks';
-import { createElement, registerBundle } from '../runtime/renderer';
+import {
+  Button,
+  createElement,
+  registerBundle,
+  Text,
+  View,
+} from '../runtime/renderer';
 
 function App() {
   const [count, setCount] = useState(0);

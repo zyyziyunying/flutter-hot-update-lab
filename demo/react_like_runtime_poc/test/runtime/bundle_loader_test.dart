@@ -41,6 +41,37 @@ void main() {
       );
     });
 
+    test('rejects missing dispatch event global', () {
+      expect(
+        () => BundleContractValidator.validate(
+          const BundleContractSnapshot(
+            hasBootstrap: true,
+            hasDispatchEvent: false,
+            metadata: {
+              'bundleId': 'bundle-a',
+              'bundleVersion': '1.0.0',
+              'runtimeAbiVersion': 'poc-v1',
+              'treeSchemaVersion': 'poc-tree-v1',
+            },
+          ),
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('rejects missing bundle metadata', () {
+      expect(
+        () => BundleContractValidator.validate(
+          const BundleContractSnapshot(
+            hasBootstrap: true,
+            hasDispatchEvent: true,
+            metadata: null,
+          ),
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
     test('rejects incompatible runtime abi version', () {
       expect(
         () => BundleContractValidator.validate(
@@ -70,6 +101,24 @@ void main() {
               'bundleVersion': '1.0.0',
               'runtimeAbiVersion': 'poc-v1',
               'treeSchemaVersion': 'poc-tree-v2',
+            },
+          ),
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('rejects invalid metadata fields', () {
+      expect(
+        () => BundleContractValidator.validate(
+          const BundleContractSnapshot(
+            hasBootstrap: true,
+            hasDispatchEvent: true,
+            metadata: {
+              'bundleId': '',
+              'bundleVersion': '1.0.0',
+              'runtimeAbiVersion': 'poc-v1',
+              'treeSchemaVersion': 'poc-tree-v1',
             },
           ),
         ),

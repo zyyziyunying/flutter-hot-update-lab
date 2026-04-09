@@ -1,4 +1,5 @@
 let hookStates: unknown[] = [];
+let committedHookStates: unknown[] = [];
 let hookIndex = 0;
 let scheduleRender: () => void = () => {};
 
@@ -8,6 +9,14 @@ export function configureHooks(onScheduleRender: () => void): void {
 
 export function beginRender(): void {
   hookIndex = 0;
+}
+
+export function commitHookState(): void {
+  committedHookStates = [...hookStates];
+}
+
+export function rollbackHookState(): void {
+  hookStates = [...committedHookStates];
 }
 
 export function useState<T>(

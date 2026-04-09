@@ -3,6 +3,8 @@ import 'package:react_like_runtime_poc/src/runtime/bundle_loader.dart';
 abstract class RuntimeHostBridge {
   Map<String, Object?> commitTree(Object? serializedTree);
 
+  Map<String, Object?> commitPatch(Object? serializedPatch);
+
   void log(String level, String message);
 }
 
