@@ -216,5 +216,53 @@ void main() {
         'Milk',
       );
     });
+
+    test('moves a child node within the same parent', () {
+      final currentTree = SerializedTreeDocument.requireNodeMap({
+        'type': 'View',
+        'props': {},
+        'events': {},
+        'children': [
+          {
+            'type': 'Text',
+            'key': 'milk',
+            'props': {'text': 'Milk'},
+            'events': {},
+            'children': [],
+          },
+          {
+            'type': 'Text',
+            'key': 'coffee',
+            'props': {'text': 'Coffee'},
+            'events': {},
+            'children': [],
+          },
+        ],
+      });
+
+      final patch = TreePatch.parse({
+        'ops': [
+          {
+            'op': 'move',
+            'from': [1],
+            'path': [0],
+          },
+        ],
+      });
+
+      final nextTree = TreePatchApplier.apply(
+        currentTree: currentTree,
+        patch: patch,
+      );
+
+      expect(
+        ((((nextTree['children'] as List).first as Map)['props']) as Map)['text'],
+        'Coffee',
+      );
+      expect(
+        ((((nextTree['children'] as List).last as Map)['props']) as Map)['text'],
+        'Milk',
+      );
+    });
   });
 }

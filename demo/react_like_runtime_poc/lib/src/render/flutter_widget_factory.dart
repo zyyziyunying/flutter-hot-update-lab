@@ -10,9 +10,11 @@ class FlutterWidgetFactory {
     ElementNode node, {
     required ButtonPressHandler onButtonPress,
   }) {
+    late final Widget widget;
+
     switch (node.type) {
       case ElementNodeType.view:
-        return Container(
+        widget = Container(
           width: double.infinity,
           color: _parseColor(node.props['backgroundColor'] as String?),
           padding: EdgeInsets.all(_readDouble(node.props['padding']) ?? 0),
@@ -30,7 +32,7 @@ class FlutterWidgetFactory {
           ),
         );
       case ElementNodeType.text:
-        return Text(
+        widget = Text(
           node.props['text'] as String? ?? '',
           style: TextStyle(
             color: _parseColor(node.props['textColor'] as String?),
@@ -39,7 +41,7 @@ class FlutterWidgetFactory {
         );
       case ElementNodeType.button:
         final handlerId = node.events['onPress'];
-        return FilledButton(
+        widget = FilledButton(
           onPressed: handlerId == null
               ? null
               : () {
@@ -51,6 +53,13 @@ class FlutterWidgetFactory {
           child: Text(node.props['label'] as String? ?? ''),
         );
     }
+
+    final key = node.key;
+    if (key == null) {
+      return widget;
+    }
+
+    return KeyedSubtree(key: ValueKey(key), child: widget);
   }
 
   double? _readDouble(Object? value) {

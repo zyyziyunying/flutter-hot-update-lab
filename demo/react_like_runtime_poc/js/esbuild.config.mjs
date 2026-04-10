@@ -10,6 +10,7 @@ await esbuild.build({
   entryPoints: {
     bundle_a: path.resolve(rootDir, 'src/apps/bundleA.tsx'),
     bundle_b: path.resolve(rootDir, 'src/apps/bundleB.tsx'),
+    bundle_c: path.resolve(rootDir, 'src/apps/bundleC.tsx'),
   },
   format: 'iife',
   jsxFactory: 'createElement',

@@ -27,11 +27,13 @@ class TreePatchOperation {
   TreePatchOperation({
     required this.op,
     required this.path,
+    this.fromPath,
     this.node,
   });
 
   final String op;
   final List<int> path;
+  final List<int>? fromPath;
   final SerializedNodeMap? node;
 
   static TreePatchOperation parse(Object? rawOperation) {
@@ -40,7 +42,7 @@ class TreePatchOperation {
     }
 
     final op = rawOperation['op'];
-    if (op != 'replace' && op != 'insert' && op != 'remove') {
+    if (op != 'replace' && op != 'insert' && op != 'remove' && op != 'move') {
       throw FormatException('unsupported-patch-op:$op');
     }
 
@@ -56,10 +58,28 @@ class TreePatchOperation {
       return segment;
     }).toList(growable: false);
 
+    List<int>? parseIndexPath(Object? rawValue, String fieldName) {
+      if (rawValue is! List) {
+        throw FormatException('$fieldName-must-be-list');
+      }
+
+      return rawValue.map((segment) {
+        if (segment is! int || segment < 0) {
+          throw FormatException('$fieldName-must-contain-non-negative-int');
+        }
+        return segment;
+      }).toList(growable: false);
+    }
+
+    final operationType = op as String;
+
     return TreePatchOperation(
-      op: op as String,
+      op: operationType,
       path: path,
-      node: op == 'remove'
+      fromPath: operationType == 'move'
+          ? parseIndexPath(rawOperation['from'], 'patch-from')
+          : null,
+      node: operationType == 'remove' || operationType == 'move'
           ? null
           : SerializedTreeDocument.requireNodeMap(rawOperation['node']),
     );
@@ -126,6 +146,12 @@ class TreePatchApplier {
           );
         case 'remove':
           nextTree = _applyRemove(currentTree: nextTree, path: operation.path);
+        case 'move':
+          nextTree = _applyMove(
+            currentTree: nextTree,
+            fromPath: operation.fromPath!,
+            toPath: operation.path,
+          );
       }
     }
 
@@ -206,6 +232,47 @@ class TreePatchApplier {
     return currentTree;
   }
 
+  static SerializedNodeMap _applyMove({
+    required SerializedNodeMap currentTree,
+    required List<int> fromPath,
+    required List<int> toPath,
+  }) {
+    if (fromPath.isEmpty || toPath.isEmpty) {
+      throw const FormatException('move-operation-cannot-target-root');
+    }
+
+    final fromParentPath = fromPath.take(fromPath.length - 1).toList();
+    final toParentPath = toPath.take(toPath.length - 1).toList();
+
+    if (!_pathsEqual(fromParentPath, toParentPath)) {
+      throw const FormatException('move-operation-must-stay-within-parent');
+    }
+
+    final parent = _findNodeAtPath(currentTree, fromParentPath);
+    final rawChildren = parent['children'];
+    if (rawChildren is! List) {
+      throw const FormatException('patch-target-children-must-be-list');
+    }
+
+    final fromIndex = fromPath.last;
+    var toIndex = toPath.last;
+    if (fromIndex >= rawChildren.length || toIndex > rawChildren.length) {
+      throw FormatException('patch-path-out-of-range:$fromPath->$toPath');
+    }
+
+    if (fromIndex == toIndex) {
+      return currentTree;
+    }
+
+    final movedChild = rawChildren.removeAt(fromIndex);
+    if (fromIndex < toIndex) {
+      toIndex -= 1;
+    }
+
+    rawChildren.insert(toIndex, movedChild);
+    return currentTree;
+  }
+
   static SerializedNodeMap _findNodeAtPath(
     SerializedNodeMap root,
     Iterable<int> pathSegments,
@@ -232,5 +299,19 @@ class TreePatchApplier {
     }
 
     return current;
+  }
+
+  static bool _pathsEqual(List<int> left, List<int> right) {
+    if (left.length != right.length) {
+      return false;
+    }
+
+    for (var index = 0; index < left.length; index += 1) {
+      if (left[index] != right[index]) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

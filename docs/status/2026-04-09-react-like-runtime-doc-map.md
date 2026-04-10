@@ -3,7 +3,7 @@
 Status: active
 Scope: Current document map and reading guide for the active React-like runtime direction in this repository.
 Source of truth: this file
-Last updated: 2026-04-09
+Last updated: 2026-04-10
 
 ## Current State
 
@@ -57,6 +57,16 @@ If you need the current implementation follow-up, then read:
 
 - `/Users/zyyziyunying/flutter-hot-update-lab/docs/status/2026-04-09-react-like-runtime-poc-result.md`
 
+### Git-Linked Reading Order
+
+If you want the implementation story with commit linkage, read in this order:
+
+1. `docs/status/2026-04-09-react-like-runtime-poc-result.md`
+2. `git log --oneline -- demo/react_like_runtime_poc docs/status/2026-04-09-react-like-runtime-poc-result.md`
+
+The status file above is the narrative entry point.
+The git log is the implementation evidence trail behind it.
+
 ### Supporting Discussion And Reference
 
 - `/Users/zyyziyunying/flutter-hot-update-lab/docs/discussion/2026-04-08-react-like-dynamic-runtime.md`
@@ -90,14 +100,16 @@ But that plan must be interpreted under the long-term design docs, not on its ow
 The biggest remaining work is now follow-up hardening and evolution of the first runnable PoC:
 
 - stronger runtime negative-path coverage
-- broader patch transport beyond append/remove/replace-style child updates
+- broader patch transport beyond single-parent append/remove/replace/move child updates
+- richer keyed reconciliation coverage for reorder plus simultaneous insert/remove cases
 - governed host bridge expansion
 - remote bundle delivery and rollback
 
 ## Verification Checkpoint
 
-The current PoC snapshot has been re-verified on 2026-04-09 with:
+The current PoC snapshot has been re-verified on 2026-04-10 with:
 
+- `cd /Users/zyyziyunying/flutter-hot-update-lab/demo/react_like_runtime_poc/js && npm run build`
 - `cd /Users/zyyziyunying/flutter-hot-update-lab/demo/react_like_runtime_poc && flutter analyze`
 - `cd /Users/zyyziyunying/flutter-hot-update-lab/demo/react_like_runtime_poc && flutter test`
 - `cd /Users/zyyziyunying/flutter-hot-update-lab/demo/react_like_runtime_poc && flutter build macos --profile`

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_js/flutter_js.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:react_like_runtime_poc/src/render/tree_patch.dart';
 import 'package:react_like_runtime_poc/src/runtime/bundle_loader.dart';
 import 'package:react_like_runtime_poc/src/runtime/flutter_js_runtime.dart';
 import 'package:react_like_runtime_poc/src/runtime/runtime_facade.dart';
@@ -115,6 +116,85 @@ void main() {
       await session.dispose();
     });
 
+    test('transports keyed move patches across the real JS bridge', () async {
+      final runtime = getJavascriptRuntime(xhr: false);
+      final session = FlutterJsRuntimeSession(runtime: runtime);
+      final host = RecordingHostBridge();
+      final bundleSource = File(
+        'assets/bundles/bundle_a.js',
+      ).readAsStringSync();
+
+      await session.attachHost(host);
+      await session.evaluateBundle(bundleSource);
+      await session.bootstrap();
+
+      final reverseHandlerId = readHandlerIdByLabel(
+        host.treeCommits.single,
+        'Reverse order',
+      );
+
+      await session.dispatchEvent(reverseHandlerId, const {});
+
+      expect(host.patchCommits, hasLength(1));
+      final moveOperations = host.patchCommits.single['ops']! as List<Object?>;
+      expect(moveOperations, hasLength(1));
+      final moveOperation = moveOperations.single as Map<Object?, Object?>;
+      expect(moveOperation['op'], 'move');
+      expect(moveOperation['from'], [2, 1]);
+      expect(moveOperation['path'], [2, 0]);
+
+      await session.dispose();
+    });
+
+    test(
+      'replaces reordered keyed buttons so Flutter receives fresh handler ids',
+      () async {
+        final runtime = getJavascriptRuntime(xhr: false);
+        final session = FlutterJsRuntimeSession(runtime: runtime);
+        final host = RecordingHostBridge();
+        final bundleSource = File(
+          'assets/bundles/bundle_c.js',
+        ).readAsStringSync();
+
+        await session.attachHost(host);
+        await session.evaluateBundle(bundleSource);
+        final contract = await session.inspectContract();
+        final metadata = BundleContractValidator.validate(contract);
+
+        expect(metadata.bundleId, 'bundle-c');
+        await session.bootstrap();
+
+        final initialTree = host.treeCommits.single;
+        final reverseHandlerId = readHandlerIdByLabel(initialTree, 'Reverse order');
+
+        await session.dispatchEvent(reverseHandlerId, const {});
+
+        expect(host.patchCommits, hasLength(1));
+
+        final reorderPatch = host.patchCommits.single;
+        final reorderOperations = reorderPatch['ops']! as List<Object?>;
+        expect(
+          reorderOperations.map((operation) => (operation! as Map)['op']),
+          containsAll(['move', 'replace']),
+        );
+
+        final reorderedTree = applyRecordedPatch(initialTree, reorderPatch);
+        final reorderedPickBHandlerId = readHandlerIdByLabel(
+          reorderedTree,
+          'Pick B',
+        );
+
+        await session.dispatchEvent(reorderedPickBHandlerId, const {});
+
+        expect(host.patchCommits, hasLength(2));
+
+        final selectionTree = applyRecordedPatch(reorderedTree, host.patchCommits.last);
+        expect(readTextByPrefix(selectionTree, 'Selected: '), 'Selected: B');
+
+        await session.dispose();
+      },
+    );
+
     test('transports a root-replace patch across the real JS bridge', () async {
       final runtime = getJavascriptRuntime(xhr: false);
       final session = FlutterJsRuntimeSession(runtime: runtime);
@@ -178,6 +258,42 @@ String readPatchedNodeText(Map<String, Object?> patch) {
   final node = operation['node']! as Map<Object?, Object?>;
   final props = node['props']! as Map<Object?, Object?>;
   return props['text']! as String;
+}
+
+Map<String, Object?> applyRecordedPatch(
+  Map<String, Object?> currentTree,
+  Map<String, Object?> patch,
+) {
+  return TreePatchApplier.apply(
+    currentTree: SerializedTreeDocument.requireNodeMap(currentTree),
+    patch: TreePatch.parse(patch),
+  );
+}
+
+String readTextByPrefix(Map<String, Object?> tree, String prefix) {
+  final queue = <Map<Object?, Object?>>[Map<Object?, Object?>.from(tree)];
+
+  while (queue.isNotEmpty) {
+    final node = queue.removeAt(0);
+    final props = node['props'];
+    if (props is Map) {
+      final text = props['text'];
+      if (text is String && text.startsWith(prefix)) {
+        return text;
+      }
+    }
+
+    final children = node['children'];
+    if (children is List) {
+      for (final child in children) {
+        if (child is Map) {
+          queue.add(Map<Object?, Object?>.from(child));
+        }
+      }
+    }
+  }
+
+  throw StateError('Missing text with prefix: $prefix');
 }
 
 class RecordingHostBridge implements RuntimeHostBridge {

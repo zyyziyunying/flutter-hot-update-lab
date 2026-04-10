@@ -63,20 +63,31 @@
     return JSON.stringify(left) === JSON.stringify(right);
   }
   function derivePatch(previousNode, nextNode, path = []) {
-    if (previousNode.type !== nextNode.type || !areRecordsEqual(previousNode.props, nextNode.props) || !areRecordsEqual(previousNode.events, nextNode.events)) {
+    if (previousNode.type !== nextNode.type || previousNode.key !== nextNode.key || !areRecordsEqual(previousNode.props, nextNode.props) || !areRecordsEqual(previousNode.events, nextNode.events)) {
       return [{ op: "replace", path, node: nextNode }];
     }
     const childOperations = [];
     const previousChildren = previousNode.children;
     const nextChildren = nextNode.children;
-    const sharedLength = Math.min(previousChildren.length, nextChildren.length);
+    const keyedMovePatch = deriveKeyedMovePatch(previousChildren, nextChildren, path);
+    const comparablePreviousChildren = keyedMovePatch?.reorderedChildren ?? previousChildren;
+    if (keyedMovePatch) {
+      childOperations.push(...keyedMovePatch.operations);
+    }
+    const sharedLength = Math.min(
+      comparablePreviousChildren.length,
+      nextChildren.length
+    );
     for (let index = 0; index < sharedLength; index += 1) {
       const operations = derivePatch(
-        previousChildren[index],
+        comparablePreviousChildren[index],
         nextChildren[index],
         [...path, index]
       );
       childOperations.push(...operations);
+    }
+    if (keyedMovePatch) {
+      return childOperations;
     }
     if (previousChildren.length + 1 === nextChildren.length) {
       childOperations.push({
@@ -93,10 +104,56 @@
       });
       return childOperations;
     }
-    if (childOperations.length <= 1) {
-      return childOperations;
+    return childOperations;
+  }
+  function deriveKeyedMovePatch(previousChildren, nextChildren, path) {
+    if (previousChildren.length <= 1 || previousChildren.length !== nextChildren.length) {
+      return null;
     }
-    return [{ op: "replace", path, node: nextNode }];
+    const previousKeys = previousChildren.map((child) => child.key);
+    const nextKeys = nextChildren.map((child) => child.key);
+    if (previousKeys.some((key) => typeof key !== "string") || nextKeys.some((key) => typeof key !== "string")) {
+      return null;
+    }
+    const previousKeyList = previousKeys;
+    const nextKeyList = nextKeys;
+    if (new Set(previousKeyList).size !== previousKeyList.length || new Set(nextKeyList).size !== nextKeyList.length) {
+      return null;
+    }
+    const sameMembers = previousKeyList.length === nextKeyList.length && previousKeyList.every((key) => nextKeyList.includes(key));
+    if (!sameMembers) {
+      return null;
+    }
+    const sameOrder = previousKeyList.every((key, index) => key === nextKeyList[index]);
+    if (sameOrder) {
+      return null;
+    }
+    const workingKeys = [...previousKeyList];
+    const reorderedChildren = [...previousChildren];
+    const operations = [];
+    for (let targetIndex = 0; targetIndex < nextKeyList.length; targetIndex += 1) {
+      const targetKey = nextKeyList[targetIndex];
+      const currentIndex = workingKeys.indexOf(targetKey);
+      if (currentIndex === -1) {
+        return null;
+      }
+      if (currentIndex === targetIndex) {
+        continue;
+      }
+      operations.push({
+        op: "move",
+        from: [...path, currentIndex],
+        path: [...path, targetIndex]
+      });
+      const [movedKey] = workingKeys.splice(currentIndex, 1);
+      workingKeys.splice(targetIndex, 0, movedKey);
+      const [movedChild] = reorderedChildren.splice(currentIndex, 1);
+      reorderedChildren.splice(targetIndex, 0, movedChild);
+    }
+    return {
+      operations,
+      reorderedChildren
+    };
   }
   function serializeNode(node) {
     if (!node) {
@@ -110,10 +167,12 @@
       return serializeNode(renderedNode);
     }
     const children = node.children.filter(Boolean).map((child) => serializeNode(child));
+    const key = typeof node.props.key === "string" ? node.props.key : void 0;
     switch (node.type) {
       case "View":
         return {
           type: "View",
+          key,
           props: {
             padding: node.props.padding ?? 0,
             backgroundColor: node.props.backgroundColor
@@ -124,6 +183,7 @@
       case "Text":
         return {
           type: "Text",
+          key,
           props: {
             text: node.props.text ?? "",
             textColor: node.props.textColor,
@@ -143,6 +203,7 @@
         }
         return {
           type: "Button",
+          key,
           props: {
             label: node.props.label ?? "",
             padding: node.props.padding

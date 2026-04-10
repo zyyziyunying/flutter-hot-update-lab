@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:react_like_runtime_poc/src/app/poc_shell.dart';
+import 'package:react_like_runtime_poc/src/render/render_view.dart';
 
 import '../support/fake_runtime_facade.dart';
 
@@ -117,6 +118,44 @@ void main() {
     expect(find.text('Counter Demo A'), findsOneWidget);
     expect(find.text('Counter: 1'), findsOneWidget);
     expect(find.text('Active bundle: bundle-a'), findsOneWidget);
+  });
+
+  testWidgets('serialized keys become Flutter subtree keys', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RenderView(
+            root: FakeBundleProgram(
+              bundleId: 'bundle-a',
+              bundleVersion: '1.0.0',
+              title: 'List Demo A',
+              buttonLabel: 'Add item',
+              handlerId: 'h_a_add_item',
+              delta: 1,
+              bootstrapTree: {
+                'type': 'View',
+                'key': 'screen-root',
+                'props': {'padding': 24},
+                'events': const {},
+                'children': [
+                  {
+                    'type': 'Text',
+                    'key': 'item-milk',
+                    'props': {'text': 'Milk', 'fontSize': 16},
+                    'events': const {},
+                    'children': const [],
+                  },
+                ],
+              },
+            ).parsedBootstrapTree(),
+            onButtonPress: (_) async {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey('screen-root')), findsOneWidget);
+    expect(find.byKey(const ValueKey('item-milk')), findsOneWidget);
   });
 
   testWidgets('insert patch renders a new list item in the shell', (tester) async {
@@ -275,6 +314,89 @@ void main() {
     expect(find.text('Item 3'), findsNothing);
     expect(find.text('Milk'), findsOneWidget);
     expect(find.text('Coffee'), findsOneWidget);
+  });
+
+  testWidgets('move patch reorders keyed list items in the shell', (tester) async {
+    await pumpShell(
+      tester,
+      runtime: createRuntime(
+        programsBySource: {
+          'bundle-a-source': FakeBundleProgram(
+            bundleId: 'bundle-a',
+            bundleVersion: '1.0.0',
+            title: 'List Demo A',
+            buttonLabel: 'Reverse order',
+            handlerId: 'h_a_reverse',
+            delta: 1,
+            bootstrapTree: {
+              'type': 'View',
+              'key': 'screen-root',
+              'props': {'padding': 24},
+              'events': const {},
+              'children': [
+                {
+                  'type': 'Text',
+                  'key': 'title-node',
+                  'props': {'text': 'List Demo A', 'fontSize': 22},
+                  'events': const {},
+                  'children': const [],
+                },
+                {
+                  'type': 'View',
+                  'key': 'list-container',
+                  'props': {'padding': 12},
+                  'events': const {},
+                  'children': [
+                    {
+                      'type': 'Text',
+                      'key': 'milk',
+                      'props': {'text': 'Milk', 'fontSize': 16},
+                      'events': const {},
+                      'children': const [],
+                    },
+                    {
+                      'type': 'Text',
+                      'key': 'coffee',
+                      'props': {'text': 'Coffee', 'fontSize': 16},
+                      'events': const {},
+                      'children': const [],
+                    },
+                  ],
+                },
+                {
+                  'type': 'Button',
+                  'key': 'reverse-button',
+                  'props': {'label': 'Reverse order', 'padding': 12},
+                  'events': {'onPress': 'h_a_reverse'},
+                  'children': const [],
+                },
+              ],
+            },
+            rerenderPatch: {
+              'ops': [
+                {
+                  'op': 'move',
+                  'from': [1, 1],
+                  'path': [1, 0],
+                },
+              ],
+            },
+          ),
+        },
+      ),
+    );
+
+    final milkKey = find.byKey(const ValueKey('milk'));
+    final coffeeKey = find.byKey(const ValueKey('coffee'));
+    expect(tester.getTopLeft(milkKey).dy, lessThan(tester.getTopLeft(coffeeKey).dy));
+
+    await tester.tap(find.text('Reverse order'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopLeft(milkKey).dy,
+      greaterThan(tester.getTopLeft(coffeeKey).dy),
+    );
   });
 
   testWidgets('root replace patch swaps the rendered shell subtree', (

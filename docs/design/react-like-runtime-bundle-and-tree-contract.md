@@ -3,7 +3,7 @@
 Status: active
 Scope: Stable contract for the first JS runtime PoC bundle entry, serialized tree format, and event and state lifecycle.
 Source of truth: this file
-Last updated: 2026-04-09
+Last updated: 2026-04-10
 
 ## Context
 
@@ -34,7 +34,7 @@ The first contract must:
 
 This contract does not try to support:
 
-- general patch-based tree transport with move operations, keyed reconciliation, or multi-parent tree surgery
+- general patch-based tree transport with keyed reconciliation beyond single-parent move operations, or multi-parent tree surgery
 - multi-page routing
 - list virtualization
 - text input
@@ -177,16 +177,18 @@ The current PoC supports a narrow patch payload shape for rerenders.
 Rules:
 
 - `ops` must be an array
-- each op currently supports `insert`, `remove`, and `replace`
+- each op currently supports `insert`, `remove`, `replace`, and same-parent `move`
 - `path` is an array of child indexes from the root
 - `path: []` means replace the root node itself
 - `replace` requires a valid `node`
 - `insert` requires a valid `node` and inserts at that child index inside the parent
 - `remove` removes the node currently located at that child index
+- `move` requires `from` and `path`, and currently supports only keyed reorder within the same parent
+- when a keyed `move` is emitted, follow-up ops may still target the moved child positions if props, events, or serialized children changed after reordering
 - `node` must be a valid serialized node under the same tree schema as full-tree commits
 
 This is intentionally limited.
-The current PoC still does not support move operations or key-driven reconciliation.
+The current PoC still does not support multi-parent moves or full key-driven reconciliation.
 
 ## Serialized Tree Format
 
@@ -227,7 +229,7 @@ Each node uses this structure:
 Fields:
 
 - `type`: required string
-- `key`: optional string used only for future identity work
+- `key`: optional string used as the current minimal identity field for stable single-page subtree tracking
 - `props`: required object, may be empty
 - `events`: required object, may be empty
 - `children`: required array, may be empty

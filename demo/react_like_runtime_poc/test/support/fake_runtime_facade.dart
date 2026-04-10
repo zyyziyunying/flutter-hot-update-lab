@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:react_like_runtime_poc/src/render/element_node.dart';
+import 'package:react_like_runtime_poc/src/render/element_parser.dart';
 import 'package:react_like_runtime_poc/src/runtime/bundle_loader.dart';
 import 'package:react_like_runtime_poc/src/runtime/runtime_facade.dart';
 
@@ -162,20 +164,27 @@ class FakeBundleProgram {
   final Object? rerenderPatch;
   final String? dispatchLogError;
 
+  ElementNode parsedBootstrapTree() {
+    return ElementParser.parseTree(bootstrapTree ?? buildTree(initialCounter));
+  }
+
   Map<String, Object?> buildTree(int counter) {
     return {
       'type': 'View',
+      'key': 'screen-root',
       'props': {'padding': 24},
       'events': {},
       'children': [
         {
           'type': 'Text',
+          'key': 'title-node',
           'props': {'text': title, 'fontSize': 22, 'textColor': '#111111'},
           'events': {},
           'children': [],
         },
         {
           'type': 'Text',
+          'key': 'count-node',
           'props': {
             'text': 'Counter: $counter',
             'fontSize': 16,
@@ -186,6 +195,7 @@ class FakeBundleProgram {
         },
         {
           'type': 'Button',
+          'key': 'primary-button',
           'props': {'label': buttonLabel, 'padding': 12},
           'events': {'onPress': handlerId},
           'children': [],

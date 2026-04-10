@@ -41,6 +41,13 @@ function App() {
           );
         }}
       />
+      <Button
+        label="Reverse order"
+        padding={12}
+        onPress={() => {
+          setItems((current) => [...current].reverse());
+        }}
+      />
     </View>
   );
 }

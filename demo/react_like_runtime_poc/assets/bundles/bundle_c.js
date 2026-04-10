@@ -266,38 +266,21 @@
     };
   }
 
-  // src/apps/bundleA.tsx
+  // src/apps/bundleC.tsx
   function App() {
-    const [items, setItems] = useState(["Milk", "Coffee"]);
-    const nextItemLabel = `Item ${items.length + 1}`;
-    return /* @__PURE__ */ createElement(View, { padding: 24, backgroundColor: "#EAF4FF" }, /* @__PURE__ */ createElement(Text, { text: "List Demo A", fontSize: 22, textColor: "#111111" }), /* @__PURE__ */ createElement(
-      Text,
-      {
-        text: "Single-page insert/remove patch demo",
-        fontSize: 16,
-        textColor: "#444444"
-      }
-    ), /* @__PURE__ */ createElement(View, { padding: 12, backgroundColor: "#FFFFFF" }, items.map((item) => /* @__PURE__ */ createElement(Text, { key: item, text: item, fontSize: 16, textColor: "#222222" }))), /* @__PURE__ */ createElement(
+    const [items, setItems] = useState(["A", "B"]);
+    const [selected, setSelected] = useState("none");
+    return /* @__PURE__ */ createElement(View, { padding: 24, backgroundColor: "#F5F0FF" }, /* @__PURE__ */ createElement(Text, { text: "Keyed Button Demo C", fontSize: 22, textColor: "#111111" }), /* @__PURE__ */ createElement(Text, { text: `Selected: ${selected}`, fontSize: 16, textColor: "#444444" }), /* @__PURE__ */ createElement(View, { padding: 12, backgroundColor: "#FFFFFF" }, items.map((item, index) => /* @__PURE__ */ createElement(
       Button,
       {
-        label: "Add item",
-        padding: 12,
+        key: item,
+        label: `Pick ${item}`,
+        padding: 12 + index,
         onPress: () => {
-          setItems((current) => [...current, nextItemLabel]);
+          setSelected(item);
         }
       }
-    ), /* @__PURE__ */ createElement(
-      Button,
-      {
-        label: "Remove last",
-        padding: 12,
-        onPress: () => {
-          setItems(
-            (current) => current.length <= 1 ? current : current.slice(0, current.length - 1)
-          );
-        }
-      }
-    ), /* @__PURE__ */ createElement(
+    ))), /* @__PURE__ */ createElement(
       Button,
       {
         label: "Reverse order",
@@ -310,7 +293,7 @@
   }
   registerBundle(
     {
-      bundleId: "bundle-a",
+      bundleId: "bundle-c",
       bundleVersion: "1.0.0",
       runtimeAbiVersion: "poc-v1",
       treeSchemaVersion: "poc-tree-v1"
