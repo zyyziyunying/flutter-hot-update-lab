@@ -79,8 +79,11 @@ The current PoC state was built in these milestone commits:
 - `f266488` — first runnable React-like runtime PoC committed and documented
 - `08b1219` — patch transport advanced from full-tree rerender toward verified patch commits
 - `e9edf02` — single-page PoC extended with insert/remove child updates and list-style demo
+- `3045a8a` — keyed move handling hardened so reordered keyed children can still refresh props and handler ids, with matching regression coverage
 
 Use this status file together with `git log --oneline -- docs/status/2026-04-09-react-like-runtime-poc-result.md demo/react_like_runtime_poc` to trace implementation milestones against the current PoC snapshot.
+
+At the time of this update, commit `3045a8a` is the implementation checkpoint that best matches the current verified PoC description in this file.
 
 ## Recommended Next Topics
 

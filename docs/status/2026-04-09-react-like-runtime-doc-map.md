@@ -66,6 +66,7 @@ If you want the implementation story with commit linkage, read in this order:
 
 The status file above is the narrative entry point.
 The git log is the implementation evidence trail behind it.
+For the current keyed-move-safe PoC snapshot, start from implementation commit `3045a8a` and then read forward or backward as needed.
 
 ### Supporting Discussion And Reference
 
