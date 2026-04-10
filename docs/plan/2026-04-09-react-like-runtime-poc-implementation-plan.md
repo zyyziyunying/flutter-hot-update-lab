@@ -3,13 +3,79 @@
 Status: implemented in the current repository snapshot
 Scope: Task-by-task implementation checklist for the first runnable `demo/react_like_runtime_poc`
 Source of truth: `/Users/zyyziyunying/flutter-hot-update-lab/docs/status/2026-04-09-react-like-runtime-poc-result.md`
-Last updated: 2026-04-09
+Last updated: 2026-04-10
 
 **Goal:** Build the first runnable `demo/react_like_runtime_poc` that proves JS bundle execution, native Flutter rendering, `onPress` event dispatch, `useState` rerender, and bundle A/B switching without host Dart code changes.
 
 **Architecture:** Create a standalone Flutter macOS demo with a narrow runtime facade, a host-owned tree parser and native widget renderer, and a tiny JS runtime contract that exposes `__poc_bundle_meta`, `__poc_bootstrap(host)`, and `__poc_dispatch_event(handlerId, payload)`. Keep the first slice intentionally narrow: `View`, `Text`, `Button`, full-tree commit, local asset bundles, and one `useState`-style hook.
 
 **Tech Stack:** Flutter 3.41, Dart 3.11, `flutter_js`, Flutter widget tests, TypeScript, TSX, esbuild
+
+## Acceptance Hold Points
+
+This implementation plan is not only a build checklist.
+At a few points, work should pause for a short manual macOS acceptance check before moving on.
+
+These hold points are intentionally small.
+They exist to confirm real runtime behavior at the moments most likely to hide false confidence.
+
+### Hold Point 1: After Real Runtime Wiring
+
+Trigger point:
+
+- after Task 8 is complete enough that the app starts from real bundle assets instead of only fakes
+
+Manual acceptance:
+
+- run the macOS app in a production-like path
+- verify bundle A cold boots successfully
+- verify the first visible UI is the expected native Flutter screen
+
+This is the first point where the repository should claim that the JS-to-native runtime chain exists outside tests.
+
+### Hold Point 2: After First Real Interaction Loop
+
+Trigger point:
+
+- after Task 8 and before final sign-off in Task 9
+
+Manual acceptance:
+
+- press a bundle A button such as add or remove
+- verify the UI changes after the press
+- verify the change reflects JS state-driven rerender in the native Flutter tree
+
+This is the point where event dispatch and `useState` rerender become manually proven rather than only test-covered.
+
+### Hold Point 3: After List Reorder Capability Exists
+
+Trigger point:
+
+- after the implementation snapshot includes the single-page keyed list reorder path
+
+Manual acceptance:
+
+- trigger the reorder action in bundle A
+- verify the visible order changes on macOS
+- verify the screen remains stable after the reorder
+
+This hold point is specifically for the current keyed list update slice.
+It is not part of the original minimum runnable PoC baseline unless the active snapshot explicitly includes that reorder capability.
+It should be repeated if reorder handling semantics materially change later.
+
+### Hold Point 4: Before PoC Completion Claim
+
+Trigger point:
+
+- during Task 9 full verification
+
+Manual acceptance:
+
+- switch from bundle A to bundle B
+- verify both UI text and button behavior change
+- if available, switch back and confirm bundle A behavior returns
+
+This is the final manual proof that bundle replacement works without changing host Dart code.
 
 ---
 
@@ -234,6 +300,13 @@ Start bundle A on launch and expose a bundle B switch control.
 Run: `cd demo/react_like_runtime_poc && flutter test`
 Expected: pass with the real bundle assets present
 
+**Step 4: Run Hold Point 1 and Hold Point 2**
+
+Do a short macOS manual check before treating the real runtime wiring as complete:
+
+- verify bundle A cold boot
+- verify one real interaction updates the native UI
+
 ### Task 9: Run Full Verification
 
 **Files:**
@@ -258,6 +331,13 @@ Run:
 - `cd demo/react_like_runtime_poc && flutter build macos --profile`
 
 **Step 3: Record any gaps honestly**
+
+**Step 4: Run Hold Point 3 and Hold Point 4 as applicable**
+
+Before claiming the PoC milestone is complete, manually confirm on macOS:
+
+- if the current snapshot includes the reorder slice, the reorder path produces the expected visible effect
+- bundle A/B switching changes both UI and behavior
 
 If macOS runtime launch cannot be completed in this session, say so clearly.
 

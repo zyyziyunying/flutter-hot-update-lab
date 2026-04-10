@@ -3,7 +3,7 @@
 Status: active
 Scope: Execution plan for the first serious proof of concept of JS runtime to Flutter native widget mapping in this repository.
 Source of truth: this file
-Last updated: 2026-04-09
+Last updated: 2026-04-10
 
 ## Context
 
@@ -53,6 +53,78 @@ This PoC is about runtime feasibility, not production readiness.
 - Two JS bundles exist and produce clearly different UI and behavior.
 - The host can switch bundles and reload them without changing Dart host code.
 - The result is verified with `flutter analyze`, `flutter test`, `flutter build macos --profile`, and at least one production-like macOS runtime validation such as `flutter run -d macos --profile` or launching the built macOS app artifact.
+
+## Manual Mac Acceptance Nodes
+
+This PoC should not advance only by code completion or automated tests.
+At a few key points, the reviewer or operator should pause and look at the actual macOS runtime effect.
+
+The goal of these checkpoints is to confirm that the project is proving the intended architecture rather than only passing local test doubles.
+
+### Node A: Bundle A Cold Boot
+
+What this node proves:
+
+- the fixed Flutter host can start
+- the JS bundle can be loaded and evaluated
+- metadata validation and bootstrap succeed
+- the first native Flutter tree becomes visible
+
+What to check on macOS:
+
+- launch the app in a production-like macOS path
+- confirm bundle A appears as the default active bundle
+- confirm the first screen renders as native Flutter UI rather than a blank or error state
+
+This node must be accepted before treating the runtime chain as real.
+
+### Node B: In-Bundle Interaction And Rerender
+
+What this node proves:
+
+- Flutter button events travel back into JS
+- JS state updates can trigger rerender
+- Flutter can reflect the rerender result as native UI change
+
+What to check on macOS:
+
+- interact with bundle A controls such as add or remove
+- confirm visible text or list content changes after the button press
+- confirm the update feels like native Flutter UI behavior, not a WebView-like surface swap
+
+This node must be accepted before treating local state and event flow as proven.
+
+### Node C: Single-Page Reorder Effect For The Current Snapshot Extension
+
+What this node proves:
+
+- the current rerender path can update a keyed single-page list without falling back to whole-screen replacement
+- visible order changes survive real runtime interaction on macOS
+
+What to check on macOS:
+
+- trigger the list reorder action in bundle A
+- confirm the visible item order actually changes
+- confirm the screen remains stable and interactive after the reorder
+
+This node is for the current keyed list update slice rather than the original minimum PoC baseline.
+If the current implementation snapshot does not include the reorder slice, this node does not block the baseline PoC claim.
+
+### Node D: Bundle A/B Switch With Behavioral Change
+
+What this node proves:
+
+- the host remains fixed while bundle identity changes
+- switching bundles changes both visible UI and interaction result
+- bundle replacement is a real runtime effect, not a Dart host code path change
+
+What to check on macOS:
+
+- switch from bundle A to bundle B
+- confirm both the screen copy and button behavior change
+- if the app UI exposes a switch-back control, confirm bundle A returns with its expected behavior
+
+This node must be accepted before treating bundle replacement as proven.
 
 ## Implementation Decisions
 
@@ -225,6 +297,9 @@ Required verification set:
 - one production-like runtime validation on macOS, such as `flutter run -d macos --profile` or launching the built app artifact after the profile build
 
 `flutter build macos --debug` may still be useful during development, but it does not satisfy the PoC exit criteria on its own.
+
+The manual macOS acceptance nodes above should be treated as sign-off checks for the intended runtime effect on macOS.
+Automated checks alone are useful but should not be treated as the only evidence for PoC completion.
 
 ## Execution Flow
 
